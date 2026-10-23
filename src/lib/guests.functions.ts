@@ -79,7 +79,7 @@ async function matches(a: string, b: string) {
   ]);
   const ax = new Uint8Array(x), by = new Uint8Array(y);
   let diff = 0;
-  for (let i = 0; i < ax.length; i++) diff |= ax[i] ^ by[i];
+  for (let i = 0; i < ax.length; i++) diff |= (ax[i] ?? 0) ^ (by[i] ?? 0);
   return diff === 0;
 }
 

@@ -11,7 +11,7 @@ const NAMES = [
   { n: "Martín", c: "bg-sun", r: "-3deg" },
 ];
 
-export function Invite({ refCode, inviterName }: { refCode?: string; inviterName?: string | null }) {
+export function Invite({ refCode, inviterName }: { refCode?: string | undefined; inviterName?: string | null | undefined }) {
   const register = useServerFn(registerGuest);
   const find = useServerFn(findGuest);
   const [mode, setMode] = useState<"join" | "back">("join");
