@@ -265,20 +265,20 @@ function Ticket({ guest }: { guest: Guest }) {
 
 
 
-      <div className="animate-poster-enter rounded-[2rem] bg-lime p-6 text-ink" style={{ animationDelay: ".25s" }}>
-        <div className="mb-4 flex items-start gap-3 rounded-2xl border-2 border-destructive bg-destructive/10 px-4 py-3">
+      <div className="animate-poster-enter rounded-[2rem] border border-paper/12 bg-card p-6 text-paper" style={{ animationDelay: ".25s" }}>
+        <div className="mb-5 flex items-start gap-3 rounded-2xl border border-destructive/45 bg-destructive/10 px-4 py-3">
           <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-destructive text-sm font-black text-paper">!</span>
           <p className="text-sm font-extrabold uppercase leading-snug tracking-wide">
             <span className="mr-2 inline-block -translate-y-0.5 rounded-full bg-destructive px-2.5 py-1 text-[0.65rem] font-black text-paper">warning</span>
             <span className="text-destructive">¿venís solo? sumá a 1 o 2 amigos, pasales tu link.</span>
           </p>
         </div>
-        <p className="font-hand text-2xl">tu link personal</p>
+        <p className="font-hand text-2xl text-muted-foreground">tu link personal</p>
         <h3 className="text-3xl font-extrabold leading-tight">Podés invitar a 1 o 2 amigos 🙌</h3>
-        <p className="mt-1 font-medium">Este link es solo tuyo: así sabemos que vienen de tu parte.</p>
-        <div className="mt-4 truncate rounded-2xl border-2 border-ink/20 bg-paper/60 px-3 py-3 font-mono text-xs">{link}</div>
+        <p className="mt-1 font-medium text-muted-foreground">Este link es solo tuyo: así sabemos que vienen de tu parte.</p>
+        <div className="mt-4 truncate rounded-2xl border border-paper/12 bg-ink px-3 py-3 font-mono text-xs">{link}</div>
         <Button onClick={share}
-          className="mt-3 h-14 w-full rounded-full bg-ink text-lg font-extrabold text-paper transition active:scale-95">
+          className="mt-3 h-14 w-full rounded-full bg-paper text-lg font-extrabold text-ink transition active:scale-95">
           {copied ? "¡Copiado! ✓" : "Compartir mi link"}
         </Button>
       </div>
