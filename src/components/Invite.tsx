@@ -98,8 +98,7 @@ export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAUL
             <dl className="night-info">
               <div><dt>Cuándo</dt><dd>{c.when}<br /><small>{c.whenNote}</small></dd></div>
               <div><dt>Dónde</dt><dd>{c.where}<br /><small>{c.whereNote}</small></dd></div>
-              <div><dt>Barra libre</dt><dd>{c.bar}<br /><small>{c.barNote}</small></dd></div>
-              {c.barNote2 && <div className="night-pill-cell"><span className="night-pill">{c.barNote2}</span></div>}
+              <div><dt>Barra libre</dt><dd>{c.bar}<br /><small>{c.barNote}</small><br />{c.barNote2 && <span className="night-pill">{c.barNote2}</span>}</dd></div>
             </dl>
             <Countdown />
           </section>
