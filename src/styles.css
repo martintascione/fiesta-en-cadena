@@ -35,10 +35,12 @@
   --color-tangerine: var(--tangerine);
   --color-ink: var(--ink);
   --color-paper: var(--paper);
+  --color-poster-blue: var(--poster-blue);
+  --color-poster-violet: var(--poster-violet);
   --font-display: "Bricolage Grotesque", system-ui, sans-serif;
   --font-sans: "Bricolage Grotesque", system-ui, sans-serif;
   --font-hand: "Caveat", cursive;
-  --font-title: "Archivo Black", system-ui, sans-serif;
+  --font-title: "Protest Strike", system-ui, sans-serif;
 }
 
 :root {
@@ -50,6 +52,8 @@
   --bubble: oklch(0.82 0.12 350);
   --lime: oklch(0.89 0.2 128);
   --tangerine: oklch(0.7 0.2 45);
+  --poster-blue: oklch(0.7 0.17 265);
+  --poster-violet: oklch(0.7 0.19 305);
   --background: var(--ink);
   --foreground: var(--paper);
   --card: oklch(0.23 0.01 270);
@@ -101,12 +105,21 @@
 }
 
 @utility poster-title {
-  font-size: 4rem;
+  font-size: 5rem;
   line-height: 0.94;
   letter-spacing: 0;
   transform: rotate(-1deg);
-  @media (min-width: 640px) { font-size: 4.75rem; }
-  @media (max-width: 359px) { font-size: 3.4rem; }
+  @media (min-width: 640px) { font-size: 5.75rem; }
+  @media (max-width: 359px) { font-size: 4.3rem; }
+}
+
+@utility poster-word {
+  display: flex;
+  justify-content: center;
+  & > span { display: inline-block; }
+  & > span:nth-child(3n + 1) { transform: rotate(-3deg) scaleY(1.03); }
+  & > span:nth-child(3n + 2) { transform: rotate(2deg) translateY(2px); }
+  & > span:nth-child(3n) { transform: rotate(-1deg) scaleY(.97); }
 }
 
 @keyframes poster-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }

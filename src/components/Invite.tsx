@@ -66,7 +66,7 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
 
         {/* Hero sticker */}
         <section className="relative mt-6">
-          <Splat className="absolute -left-4 top-2 z-0 h-16 w-16 -rotate-12 text-sun" />
+          <Splat className="absolute -left-4 top-2 z-0 h-16 w-16 -rotate-12 text-poster-blue" />
           <img src={gnome} alt="" aria-hidden width={816} height={816}
             style={{ ["--r" as string]: "8deg" }}
             className="animate-poster-drift pointer-events-none absolute -right-4 -top-1 z-20 w-24 grayscale mix-blend-screen" />
@@ -74,12 +74,11 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
             style={{ ["--r" as string]: "-10deg", animationDelay: "1s" }}
             className="animate-poster-drift pointer-events-none absolute -bottom-12 -left-5 z-20 w-24 grayscale mix-blend-screen" />
           <div className="animate-poster-enter relative z-10 mx-auto py-14 text-center">
-            <span className="absolute bottom-2 right-0 -rotate-6 bg-bubble px-2 py-0.5 text-xs font-bold uppercase text-ink">wow</span>
-            <p className="mb-4 text-xs font-bold uppercase">estás invitad@ al</p>
-            <h1 className="poster-title font-title text-paper">
-              <span className="relative inline-block">TRI<span aria-hidden className="absolute -bottom-1 -right-3 h-1 w-10 -rotate-6 bg-sky" /></span>
-              <br />
-              <span className="inline-block">CUMPLE</span>
+            <span className="absolute bottom-2 right-0 -rotate-6 bg-poster-violet px-2 py-0.5 font-title text-base uppercase text-ink">wow</span>
+            <p className="mb-4 inline-block -rotate-3 font-title text-lg uppercase text-poster-blue">estás invitad@ al</p>
+            <h1 aria-label="Tricumple" className="poster-title font-title text-poster-blue">
+              <span aria-hidden className="poster-word"><span>T</span><span>R</span><span className="text-poster-violet">I</span></span>
+              <span aria-hidden className="poster-word"><span>C</span><span>U</span><span>M</span><span>P</span><span className="text-poster-violet">L</span><span>E</span></span>
             </h1>
           </div>
           <div className="mt-4 flex justify-center gap-2">
