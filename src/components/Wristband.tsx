@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { startReceiptUpload, confirmReceipt, redeemCode, type Discount } from "@/lib/guests.functions";
 
-const ALIAS = "manufer.bru";
+const ALIAS = "tricumple.bru";
+const ACCOUNT_NAME = "MANUELA FERRARI";
 export const BAR_PRICE = 17500;
 const money = (n: number) => "$" + n.toLocaleString("es-AR");
 const EXTS = ["jpg", "jpeg", "png", "webp", "heic", "pdf"] as const;
@@ -120,6 +121,7 @@ export function Wristband({ qrToken, initialDone, initialDiscount = null }: { qr
           <span className="font-mono text-xl font-bold">{ALIAS}</span>
           <span className="rounded-full bg-sun px-3 py-1 text-xs font-extrabold uppercase text-ink">{aliasCopied ? "copiado" : "copiar"}</span>
         </button>
+        <p className="mt-2 text-xs text-muted-foreground">Titular de la cuenta: <span className="font-bold text-paper">{ACCOUNT_NAME}</span></p>
 
         <p className="mt-5 text-[10px] font-extrabold uppercase tracking-[0.25em] text-muted-foreground">2 · subí el comprobante</p>
         {done ? (
