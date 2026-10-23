@@ -1,0 +1,170 @@
+import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { QRCodeSVG } from "qrcode.react";
+import { registerGuest, findGuest } from "@/lib/guests.functions";
+
+type Guest = { fullName: string; email: string; inviteCode: string; qrToken: string };
+
+const NAMES = [
+  { n: "Giuli", c: "bg-sky", r: "-6deg" },
+  { n: "Manu", c: "bg-bubble", r: "5deg" },
+  { n: "Martín", c: "bg-sun", r: "-3deg" },
+];
+
+export function Invite({ refCode, inviterName }: { refCode?: string; inviterName?: string | null }) {
+  const register = useServerFn(registerGuest);
+  const find = useServerFn(findGuest);
+  const [mode, setMode] = useState<"join" | "back">("join");
+  const [guest, setGuest] = useState<Guest | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    const fd = new FormData(e.currentTarget);
+    const email = String(fd.get("email") || "");
+    setLoading(true);
+    try {
+      if (mode === "join") {
+        const fullName = String(fd.get("fullName") || "");
+        if (fullName.trim().split(/\s+/).length < 2) throw new Error("Poné nombre y apellido 🙏");
+        setGuest(await register({ data: { fullName, email, ref: refCode } }));
+      } else {
+        const g = await find({ data: { email } });
+        if (!g) throw new Error("No encontramos ese email. ¿Ya te anotaste?");
+        setGuest(g);
+      }
+    } catch (err) {
+      setError(err instanceof Error && err.message.length < 80 ? err.message : "Revisá los datos e intentá de nuevo");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="grain min-h-[100dvh] overflow-hidden">
+      {/* blobs */}
+      <div aria-hidden className="pointer-events-none fixed inset-0">
+        <div className="animate-wobble absolute -left-24 -top-24 h-72 w-72 bg-sky opacity-40 blur-3xl" />
+        <div className="animate-wobble absolute -right-20 top-1/3 h-72 w-72 bg-bubble opacity-30 blur-3xl" />
+        <div className="animate-wobble absolute -bottom-24 left-1/4 h-80 w-80 bg-lime opacity-25 blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto flex max-w-md flex-col px-5 pb-16 pt-[max(2rem,env(safe-area-inset-top))]">
+        {/* Hero sticker */}
+        <section className="relative mt-4">
+          <div className="animate-pop sticker animate-wobble relative mx-auto bg-ink px-6 py-10 text-center">
+            <span className="absolute left-5 top-4 rounded-full border-2 border-paper px-3 py-0.5 text-xs font-bold uppercase">x3</span>
+            <span className="absolute bottom-4 right-5 rounded-full border-2 border-paper px-3 py-0.5 text-xs font-bold uppercase">wow</span>
+            <p className="font-hand text-2xl text-sun">estás invitad@ al</p>
+            <h1 className="font-display text-[22vw] font-extrabold leading-[0.85] tracking-tighter sm:text-8xl">
+              TRI<br />
+              <span className="inline-block -rotate-3 text-lime">CUMPLE</span>
+            </h1>
+          </div>
+          <div className="mt-6 flex justify-center gap-2">
+            {NAMES.map((x, i) => (
+              <span
+                key={x.n}
+                style={{ ["--r" as string]: x.r, animationDelay: `${i * 0.4}s` }}
+                className={`animate-float ${x.c} sticker rounded-full px-4 py-2 text-lg font-extrabold text-ink`}
+              >
+                {x.n}
+              </span>
+            ))}
+          </div>
+        </section>
+
+        {/* marquee */}
+        <div className="-mx-5 mt-8 -rotate-2 overflow-hidden bg-sun py-2 text-ink">
+          <div className="animate-marquee flex w-max gap-8 whitespace-nowrap text-xl font-extrabold uppercase">
+            {Array.from({ length: 2 }).flatMap((_, k) =>
+              ["3 cumples", "★", "1 fiesta", "★", "traé amigos", "★", "fecha y lugar muy pronto", "★"].map((t, i) => (
+                <span key={`${k}-${i}`}>{t}</span>
+              )),
+            )}
+          </div>
+        </div>
+
+        {guest ? (
+          <Ticket guest={guest} />
+        ) : (
+          <section className="animate-pop mt-10 rounded-[2rem] bg-card p-6" style={{ animationDelay: ".2s" }}>
+            {inviterName && (
+              <p className="mb-4 inline-block -rotate-1 rounded-xl bg-bubble px-3 py-1 font-bold text-ink">
+                👋 Te invitó {inviterName}
+              </p>
+            )}
+            <h2 className="text-3xl font-extrabold leading-tight">
+              {mode === "join" ? "Confirmá y llevate tu QR" : "Recuperá tu QR"}
+            </h2>
+            <p className="mt-1 text-muted-foreground">
+              {mode === "join" ? "Solo tu nombre y email. Nada más." : "Poné el email con el que te anotaste."}
+            </p>
+            <form onSubmit={onSubmit} className="mt-6 space-y-3">
+              {mode === "join" && (
+                <input name="fullName" required maxLength={100} autoComplete="name" placeholder="Nombre y apellido"
+                  className="h-14 w-full rounded-2xl border-2 border-input bg-transparent px-4 text-lg outline-none focus:border-ring" />
+              )}
+              <input name="email" type="email" required maxLength={255} autoComplete="email" inputMode="email" placeholder="tu@email.com"
+                className="h-14 w-full rounded-2xl border-2 border-input bg-transparent px-4 text-lg outline-none focus:border-ring" />
+              {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
+              <button disabled={loading}
+                className="h-14 w-full rounded-full bg-primary text-lg font-extrabold text-primary-foreground transition active:scale-95 disabled:opacity-60">
+                {loading ? "Un toque…" : mode === "join" ? "¡Acepto la invitación! 🎉" : "Ver mi QR"}
+              </button>
+            </form>
+            <button onClick={() => { setMode(mode === "join" ? "back" : "join"); setError(""); }}
+              className="mt-4 w-full text-center text-sm font-semibold text-secondary underline underline-offset-4">
+              {mode === "join" ? "Ya me anoté, quiero ver mi QR" : "Todavía no me anoté"}
+            </button>
+          </section>
+        )}
+      </div>
+    </main>
+  );
+}
+
+function Ticket({ guest }: { guest: Guest }) {
+  const [copied, setCopied] = useState(false);
+  const link = typeof window !== "undefined" ? `${window.location.origin}/i/${guest.inviteCode}` : "";
+  const first = guest.fullName.split(" ")[0];
+
+  async function share() {
+    const text = "¡Vení al tricumple de Giuli, Manu y Martín! Anotate acá 👉";
+    if (navigator.share) {
+      try { await navigator.share({ title: "Tricumple", text, url: link }); return; } catch { /* cancelled */ }
+    }
+    await navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <section className="mt-10 space-y-6">
+      <div className="animate-pop sticker rounded-[2rem] bg-paper p-6 text-center text-ink">
+        <p className="font-hand text-3xl">¡Adentro, {first}!</p>
+        <div className="mx-auto mt-4 w-fit rounded-3xl bg-sun p-4">
+          <QRCodeSVG value={`TRICUMPLE:${guest.qrToken}`} size={220} bgColor="transparent" />
+        </div>
+        <p className="mt-4 text-lg font-extrabold uppercase">{guest.fullName}</p>
+        <p className="mt-2 rounded-xl bg-ink px-3 py-2 text-sm font-bold text-paper">
+          📸 Sacale captura. Lo vas a mostrar en la puerta.
+        </p>
+        <p className="mt-2 text-xs opacity-70">Si lo perdés, volvé a este link y entrá con tu email.</p>
+      </div>
+
+      <div className="animate-pop rounded-[2rem] bg-lime p-6 text-ink" style={{ animationDelay: ".25s" }}>
+        <p className="font-hand text-2xl">tu link personal</p>
+        <h3 className="text-3xl font-extrabold leading-tight">Podés invitar a 2 o 3 amigos 🙌</h3>
+        <p className="mt-1 font-medium">Este link es solo tuyo: así sabemos que vienen de tu parte.</p>
+        <div className="mt-4 truncate rounded-2xl border-2 border-ink/20 bg-paper/60 px-4 py-3 font-mono text-sm">{link}</div>
+        <button onClick={share}
+          className="mt-3 h-14 w-full rounded-full bg-ink text-lg font-extrabold text-paper transition active:scale-95">
+          {copied ? "¡Copiado! ✓" : "Compartir mi link"}
+        </button>
+      </div>
+    </section>
+  );
+}
