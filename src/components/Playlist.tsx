@@ -66,7 +66,7 @@ export function Playlist({ qrToken, variant = "poster" }: { qrToken?: string; va
     <section className={`playlist playlist-${variant}`}>
       <p className="playlist-kicker">DJ en vivo · pedí tu tema</p>
       <h2 className="playlist-title">Sé parte de la <em>playlist</em> de la fiesta.</h2>
-      <p className="playlist-sub">El DJ la rompe igual, pero imaginate si suena el tema que pediste vos. Elegí hasta {MAX}.</p>
+      <p className="playlist-sub">El DJ hace sonar el tema que pediste vos.</p>
       <div className="playlist-search">
         <svg viewBox="0 0 24 24" aria-hidden><path d="M12 0a12 12 0 1 0 0 24 12 12 0 0 0 0-24Zm5.5 17.3a.75.75 0 0 1-1 .25c-2.8-1.7-6.4-2.1-10.6-1.2a.75.75 0 1 1-.3-1.5c4.6-1 8.5-.6 11.7 1.4.3.2.4.7.2 1.05Zm1.5-3.3a.94.94 0 0 1-1.3.3c-3.2-2-8.2-2.6-12-1.4a.94.94 0 1 1-.55-1.8c4.4-1.3 9.8-.7 13.5 1.6.4.3.6.9.35 1.3Zm.1-3.4C15.3 8.3 9 8.1 5.3 9.2a1.12 1.12 0 1 1-.65-2.15c4.3-1.3 11.3-1 15.7 1.6a1.12 1.12 0 0 1-1.15 1.95Z" /></svg>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscá un tema o artista" aria-label="Buscar en Spotify" />

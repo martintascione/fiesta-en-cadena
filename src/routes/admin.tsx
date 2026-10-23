@@ -87,13 +87,13 @@ function Admin() {
 
   return (
     <main className="mx-auto max-w-3xl px-5 py-10">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-4xl font-extrabold">Panel</h1>
-        <div className="flex flex-wrap items-center gap-4">
-          <Link to="/" className="text-sm font-semibold text-muted-foreground underline">Volver a la invitación</Link>
-          <button onClick={exportCsv} className="text-sm text-muted-foreground underline">Exportar CSV</button>
-          <button onClick={() => router.invalidate()} className="text-sm text-muted-foreground underline">Actualizar</button>
-          <button onClick={async () => { await logout(); router.invalidate(); }} className="text-sm text-muted-foreground underline">Salir</button>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          <Link to="/" className="font-semibold text-muted-foreground underline">Volver a la invitación</Link>
+          <button onClick={exportCsv} className="text-muted-foreground underline">Exportar CSV</button>
+          <button onClick={() => router.invalidate()} className="text-muted-foreground underline">Actualizar</button>
+          <button onClick={async () => { await logout(); router.invalidate(); }} className="text-muted-foreground underline">Salir</button>
         </div>
       </div>
       <CopyEditor initial={data.copy} />
