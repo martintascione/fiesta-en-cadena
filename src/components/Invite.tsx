@@ -273,7 +273,7 @@ function Ticket({ guest }: { guest: Guest }) {
         <p className="font-hand text-2xl">tu link personal</p>
         <h3 className="text-3xl font-extrabold leading-tight">Podés invitar a 1 o 2 amigos 🙌</h3>
         <p className="mt-1 font-medium">Este link es solo tuyo: así sabemos que vienen de tu parte.</p>
-        <div className="mt-4 truncate rounded-2xl border-2 border-ink/20 bg-paper/60 px-4 py-3 font-mono text-sm">{link}</div>
+        <div className="mt-4 truncate rounded-2xl border-2 border-ink/20 bg-paper/60 px-3 py-3 font-mono text-xs">{link}</div>
         <Button onClick={share}
           className="mt-3 h-14 w-full rounded-full bg-ink text-lg font-extrabold text-paper transition active:scale-95">
           {copied ? "¡Copiado! ✓" : "Compartir mi link"}
