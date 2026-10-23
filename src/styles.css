@@ -167,3 +167,62 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+.invitation-print {
+  --background: #0A0A0A;
+  --foreground: #7B94E8;
+  --primary: #B37BE0;
+  --primary-foreground: var(--background);
+  --ring: var(--foreground);
+  --destructive: var(--primary);
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Anton", sans-serif;
+  position: relative;
+  isolation: isolate;
+}
+.invitation-print::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+  opacity: .1;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+.print-filter { position: absolute; pointer-events: none; }
+.print-layout { width: min(100%, 760px); padding: 38px 24px 40px; }
+.print-hero { padding: 78px 0 48px; }
+.print-eyebrow, .print-names { text-transform: uppercase; font-size: 22px; line-height: 1.2; }
+.print-eyebrow { margin-bottom: 24px; }
+.print-title { font-size: 112px; line-height: .85; letter-spacing: 0; font-weight: 400; filter: url(#blur-print); animation: print-arrive .8s ease-out both; }
+.print-title > span { display: block; }
+.print-title > span:first-child { margin-bottom: 6px; }
+.print-accent { color: var(--primary); }
+.print-names { margin-top: 26px; font-size: 24px; }
+.print-star { position: absolute; filter: url(#blur-print); width: 38px; height: 38px; animation: print-blink 7s ease-in-out 2; }
+.print-star-one { left: 0; top: 4px; }
+.print-star-two { right: 0; top: 136px; width: 26px; height: 26px; animation-delay: 1s; }
+.print-star-three { left: 4px; bottom: 24px; width: 24px; height: 24px; animation-delay: 2s; }
+.print-stamp { position: absolute; right: 6px; top: 0; width: 76px; height: 76px; border-radius: 50%; background: var(--primary); color: var(--background); border: 2px dashed var(--background); outline: 3px solid var(--primary); display: grid; place-items: center; transform: rotate(15deg); filter: url(#blur-print); font-size: 19px; }
+.print-label { position: absolute; right: 2px; bottom: 4px; transform: rotate(-7deg); font-size: 14px; line-height: 1; padding: 8px 12px; background: var(--primary); color: var(--background); filter: url(#blur-print); }
+.print-registration { margin: 28px auto 0; width: 100%; max-width: 420px; }
+.print-input { width: 100%; height: 56px; padding: 0 16px; border: 2px solid var(--foreground); border-radius: 0; background: transparent; color: var(--foreground); font-size: 18px; outline: none; }
+.print-input::placeholder { color: var(--foreground); opacity: .75; text-transform: uppercase; }
+.print-input:focus { border-color: var(--primary); }
+.print-submit { width: 100%; height: 58px; border-radius: 0; font: inherit; font-size: 21px; text-transform: uppercase; color: var(--background); background: var(--primary); box-shadow: none; filter: url(#blur-print); }
+.print-submit:hover { background: var(--foreground); }
+.print-recovery { margin-top: 15px; width: 100%; font-size: 14px; text-transform: uppercase; color: var(--foreground); white-space: normal; height: auto; }
+@keyframes print-arrive { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: scale(1); } }
+@keyframes print-blink { 0%, 40%, 65%, 100% { opacity: 1; } 52% { opacity: .65; } }
+@media (min-width: 640px) {
+  .print-layout { padding-top: 44px; }
+  .print-hero { padding-top: 80px; padding-bottom: 60px; }
+  .print-title { font-size: 220px; }
+  .print-eyebrow { font-size: 26px; }
+  .print-names { font-size: 32px; }
+  .print-stamp { width: 96px; height: 96px; font-size: 24px; }
+  .print-star-two { top: 160px; }
+}
+@media (max-width: 359px) { .print-layout { padding-inline: 18px; } .print-title { font-size: 96px; } .print-names { font-size: 21px; } }

@@ -4,6 +4,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { registerGuest, findGuest } from "@/lib/guests.functions";
 import boombox from "@/assets/glyph-boombox.png";
 import { Wristband } from "@/components/Wristband";
+import { Button } from "@/components/ui/button";
 
 function Splat({ className }: { className?: string }) {
   return (
@@ -21,7 +22,7 @@ const NAMES = [
   { name: "Martín", accent: "border-lime bg-lime/10 text-lime" },
 ];
 
-export function Invite({ refCode, inviterName }: { refCode?: string | undefined; inviterName?: string | null | undefined }) {
+export function Invite({ refCode, inviterName, mainPoster = false }: { refCode?: string | undefined; inviterName?: string | null | undefined; mainPoster?: boolean }) {
   const register = useServerFn(registerGuest);
   const find = useServerFn(findGuest);
   const [mode, setMode] = useState<"join" | "back">("join");
@@ -53,8 +54,9 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
   }
 
   return (
-    <main className="grain min-h-[100dvh] overflow-hidden">
-      <div aria-hidden className="sand-field pointer-events-none fixed inset-0 overflow-hidden">
+    <main className={mainPoster && !guest ? "invitation-print min-h-[100dvh] overflow-hidden" : "grain min-h-[100dvh] overflow-hidden"}>
+      {mainPoster && !guest && <svg aria-hidden className="print-filter" width="0" height="0"><defs><filter id="blur-print" x="-10%" y="-15%" width="120%" height="130%" colorInterpolationFilters="sRGB"><feGaussianBlur stdDeviation="2" /><feComponentTransfer result="print-edge"><feFuncA type="linear" slope="8" intercept="-3.5" /></feComponentTransfer><feComposite in="SourceGraphic" in2="print-edge" operator="atop" /></filter></defs></svg>}
+      {!mainPoster && <div aria-hidden className="sand-field pointer-events-none fixed inset-0 overflow-hidden">
         {Array.from({ length: 90 }, (_, i) => (
           <span key={i} className="sand-particle" style={{
             left: `${(i * 37.13) % 100}%`,
@@ -63,8 +65,16 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
             animationDuration: `${14 + i % 13}s`,
           }} />
         ))}
-      </div>
-      <div className="relative mx-auto flex max-w-md flex-col px-5 pb-16 pt-[max(2rem,env(safe-area-inset-top))]">
+      </div>}
+      <div className={mainPoster && !guest ? "print-layout relative mx-auto flex flex-col" : "relative mx-auto flex max-w-md flex-col px-5 pb-16 pt-[max(2rem,env(safe-area-inset-top))]"}>
+        {mainPoster ? !guest && <section className="print-hero relative text-center">
+          {["one", "two", "three"].map(position => <svg key={position} aria-hidden viewBox="0 0 100 100" className={`print-star print-star-${position}`} fill="currentColor"><path d="M50 0Q54 44 100 50Q54 56 50 100Q46 56 0 50Q46 44 50 0Z" /></svg>)}
+          <div aria-hidden className="print-stamp"><span>¡FIESTA!</span></div>
+          <p className="print-eyebrow">estás invitad@ al</p>
+          <h1 className="print-title" aria-label="TRICUMPLE"><span>TRI</span><span>CUM<span className="print-accent">P</span>LE</span></h1>
+          <p className="print-names">Giuli · Manu · Martín</p>
+          <span aria-hidden className="print-label">TRICUMPLE</span>
+        </section> : <>
         {/* top labels */}
         <div className="flex items-center justify-between border-b border-paper/25 pb-4 text-[10px] font-bold uppercase leading-tight">
           <span>proyecto<br />x3</span>
@@ -108,39 +118,40 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
             )}
           </div>
         </div>
+        </>}
 
         {guest ? (
           <Ticket guest={guest} />
         ) : (
-          <section className="animate-poster-enter mt-10 rounded-lg bg-card p-6" style={{ animationDelay: ".2s" }}>
+          <section className={mainPoster ? "print-registration" : "animate-poster-enter mt-10 rounded-lg bg-card p-6"}>
             {inviterName && (
               <p className="mb-4 inline-block rounded-full border border-paper/40 px-3 py-1 text-sm font-semibold text-paper">
                 👋 Te invitó {inviterName}
               </p>
             )}
-            <h2 className="text-2xl font-extrabold leading-tight">
+            <h2 className={mainPoster ? "sr-only" : "text-2xl font-extrabold leading-tight"}>
               {mode === "join" ? "Confirmá y llevate tu QR" : "Recuperá tu QR"}
             </h2>
-            <p className="mt-1 text-muted-foreground">
+            <p className={mainPoster ? "sr-only" : "mt-1 text-muted-foreground"}>
               {mode === "join" ? "Solo tu nombre y email. Nada más." : "Poné el email con el que te anotaste."}
             </p>
-            <form onSubmit={onSubmit} className="mt-6 space-y-3">
+            <form onSubmit={onSubmit} className={mainPoster ? "space-y-3" : "mt-6 space-y-3"}>
               {mode === "join" && (
                 <input name="fullName" required maxLength={100} autoComplete="name" placeholder="Nombre y apellido"
-                  className="h-14 w-full rounded-2xl border-2 border-input bg-transparent px-4 text-lg outline-none focus:border-ring" />
+                  aria-label="Nombre y apellido" className={mainPoster ? "print-input" : "h-14 w-full rounded-2xl border-2 border-input bg-transparent px-4 text-lg outline-none focus:border-ring"} />
               )}
               <input name="email" type="email" required maxLength={255} autoComplete="email" inputMode="email" placeholder="tu@email.com"
-                className="h-14 w-full rounded-2xl border-2 border-input bg-transparent px-4 text-lg outline-none focus:border-ring" />
+                aria-label="Email" className={mainPoster ? "print-input" : "h-14 w-full rounded-2xl border-2 border-input bg-transparent px-4 text-lg outline-none focus:border-ring"} />
               {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
-              <button disabled={loading}
-                className="h-14 w-full rounded-full bg-primary text-lg font-extrabold text-primary-foreground transition active:scale-95 disabled:opacity-60">
-                {loading ? "Un toque…" : mode === "join" ? "¡Acepto la invitación! 🎉" : "Ver mi QR"}
-              </button>
+              <Button disabled={loading} type="submit"
+                className={mainPoster ? "print-submit" : "h-14 w-full rounded-full bg-primary text-lg font-extrabold text-primary-foreground transition active:scale-95 disabled:opacity-60"}>
+                {loading ? "Un toque…" : mode === "join" ? mainPoster ? "Confirmar asistencia" : "¡Acepto la invitación! 🎉" : "Ver mi QR"}
+              </Button>
             </form>
-            <button onClick={() => { setMode(mode === "join" ? "back" : "join"); setError(""); }}
-              className="mt-4 w-full text-center text-sm font-semibold text-secondary underline underline-offset-4">
+            <Button variant="link" onClick={() => { setMode(mode === "join" ? "back" : "join"); setError(""); }}
+              className={mainPoster ? "print-recovery" : "mt-4 w-full text-center text-sm font-semibold text-secondary underline underline-offset-4"}>
               {mode === "join" ? "Ya me anoté, quiero ver mi QR" : "Todavía no me anoté"}
-            </button>
+            </Button>
           </section>
         )}
       </div>

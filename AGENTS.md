@@ -8,3 +8,6 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep the main-screen poster presentation opt-in on Invite; referral screens and accepted-ticket logic stay unchanged so visual redesigns do not alter guest flows.
+- Define the reusable blurred-print SVG filter once inside the main-screen presentation and reference it from scoped CSS to keep all printed edges consistent.
