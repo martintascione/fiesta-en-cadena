@@ -55,7 +55,7 @@ export function Invite({ refCode, inviterName, mainPoster = false }: { refCode?:
 
   return (
     <main className={mainPoster && !guest ? "invitation-print min-h-[100dvh] overflow-hidden" : "grain min-h-[100dvh] overflow-hidden"}>
-      {mainPoster && !guest && <svg aria-hidden className="print-filter" width="0" height="0"><defs><filter id="blur-print" x="-10%" y="-15%" width="120%" height="130%" colorInterpolationFilters="sRGB"><feGaussianBlur stdDeviation="2" /><feComponentTransfer><feFuncA type="linear" slope="8" intercept="-3.5" /></feComponentTransfer></filter></defs></svg>}
+      {mainPoster && !guest && <svg aria-hidden className="print-filter" width="0" height="0"><defs><filter id="blur-print" x="-10%" y="-15%" width="120%" height="130%" colorInterpolationFilters="sRGB"><feGaussianBlur stdDeviation="2" /><feComponentTransfer result="print-edge"><feFuncA type="linear" slope="8" intercept="-3.5" /></feComponentTransfer><feComposite in="SourceGraphic" in2="print-edge" operator="atop" /></filter></defs></svg>}
       {!mainPoster && <div aria-hidden className="sand-field pointer-events-none fixed inset-0 overflow-hidden">
         {Array.from({ length: 90 }, (_, i) => (
           <span key={i} className="sand-particle" style={{
@@ -68,9 +68,7 @@ export function Invite({ refCode, inviterName, mainPoster = false }: { refCode?:
       </div>}
       <div className={mainPoster && !guest ? "print-layout relative mx-auto flex flex-col" : "relative mx-auto flex max-w-md flex-col px-5 pb-16 pt-[max(2rem,env(safe-area-inset-top))]"}>
         {mainPoster ? !guest && <section className="print-hero relative text-center">
-          <span aria-hidden className="print-star print-star-one">✦</span>
-          <span aria-hidden className="print-star print-star-two">✦</span>
-          <span aria-hidden className="print-star print-star-three">✦</span>
+          {["one", "two", "three"].map(position => <svg key={position} aria-hidden viewBox="0 0 100 100" className={`print-star print-star-${position}`} fill="currentColor"><path d="M50 0Q54 44 100 50Q54 56 50 100Q46 56 0 50Q46 44 50 0Z" /></svg>)}
           <div aria-hidden className="print-stamp"><span>¡FIESTA!</span></div>
           <p className="print-eyebrow">estás invitad@ al</p>
           <h1 className="print-title" aria-label="TRICUMPLE"><span>TRI</span><span>CUM<span className="print-accent">P</span>LE</span></h1>

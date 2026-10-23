@@ -201,10 +201,10 @@
 .print-title > span:first-child { margin-bottom: 6px; }
 .print-accent { color: var(--primary); }
 .print-names { margin-top: 26px; font-size: 24px; }
-.print-star { position: absolute; filter: url(#blur-print); font-size: 38px; line-height: 1; animation: print-blink 7s ease-in-out 2; }
+.print-star { position: absolute; filter: url(#blur-print); width: 38px; height: 38px; animation: print-blink 7s ease-in-out 2; }
 .print-star-one { left: 0; top: 4px; }
-.print-star-two { right: 0; top: 136px; font-size: 26px; animation-delay: 1s; }
-.print-star-three { left: 4px; bottom: 24px; font-size: 24px; animation-delay: 2s; }
+.print-star-two { right: 0; top: 136px; width: 26px; height: 26px; animation-delay: 1s; }
+.print-star-three { left: 4px; bottom: 24px; width: 24px; height: 24px; animation-delay: 2s; }
 .print-stamp { position: absolute; right: 6px; top: 0; width: 76px; height: 76px; border-radius: 50%; background: var(--primary); color: var(--background); border: 2px dashed var(--background); outline: 3px solid var(--primary); display: grid; place-items: center; transform: rotate(15deg); filter: url(#blur-print); font-size: 19px; }
 .print-label { position: absolute; right: 2px; bottom: 4px; transform: rotate(-7deg); font-size: 14px; line-height: 1; padding: 8px 12px; background: var(--primary); color: var(--background); filter: url(#blur-print); }
 .print-registration { margin: 28px auto 0; width: 100%; max-width: 420px; }
