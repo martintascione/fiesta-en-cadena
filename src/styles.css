@@ -127,6 +127,22 @@
 @utility animate-poster-enter { animation: poster-enter .65s ease-out both; }
 @utility animate-poster-drift { animation: poster-drift 9s ease-in-out infinite; }
 
+@keyframes party-sweep {
+  0%,100% { transform: rotate(-23deg); opacity: .1; }
+  50% { transform: rotate(20deg); opacity: .24; }
+}
+@utility party-light {
+  position: absolute;
+  top: -100px;
+  width: 150px;
+  height: 720px;
+  transform-origin: top center;
+  clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%);
+  background: linear-gradient(to bottom, transparent, currentColor 45%, transparent);
+  filter: blur(12px);
+  animation: party-sweep 12s ease-in-out infinite;
+}
+
 @keyframes float { 0%,100% { transform: translateY(0) rotate(var(--r,0deg)); } 50% { transform: translateY(-14px) rotate(calc(var(--r,0deg) + 4deg)); } }
 @keyframes spin-slow { to { transform: rotate(360deg); } }
 @keyframes marquee { to { transform: translateX(-50%); } }
