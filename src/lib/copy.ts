@@ -38,7 +38,7 @@ export const DEFAULT_COPY: Copy = {
   whereNote: "Palermo",
   bar: "$17.500",
   barNote: "toda la noche",
-  barNote2: "o trae tu propia bebida",
+  barNote2: "o trae tu bebida",
   formTitle: "Confirmá tu lugar.",
   formSub: "Solo tu nombre y email. Nada más.",
   button: "Yendo",
