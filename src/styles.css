@@ -215,6 +215,7 @@
 .night-dir { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: clamp(15px, 4vw, 22px); font-weight: 600; letter-spacing: -.02em; animation: night-in .8s .25s ease-out both; }
 .night-rule { display: inline-block; width: clamp(56px, 18vw, 96px); height: 2px; background: var(--night-blue); }
 .night-synopsis { font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-size: clamp(18px, 4.8vw, 26px); line-height: 1.2; margin-top: clamp(18px, 4vw, 32px); max-width: 30ch; opacity: .95; animation: night-in .8s .4s ease-out both; }
+.night-chip { display: inline-block; background: var(--night-blue); color: var(--night-paper); font-style: normal; font-weight: 600; letter-spacing: .01em; padding: .1em .55em .16em; border-radius: 9999px; white-space: nowrap; transform: rotate(-1.5deg); box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 
 .night-joke { font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-size: clamp(16px, 4.2vw, 21px); color: var(--night-blue); margin-top: 10px; animation: night-in .8s .45s ease-out both; }
 .night-info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: clamp(20px, 5vw, 40px); padding-top: 14px; border-top: 1.5px solid var(--night-paper); animation: night-in .8s .5s ease-out both; }
