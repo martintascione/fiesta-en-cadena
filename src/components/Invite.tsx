@@ -76,7 +76,7 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
           <Splat className="animate-spin-slow absolute -left-10 -top-10 z-0 h-40 w-40 text-tangerine" />
           <img src={gnome} alt="" aria-hidden width={816} height={816}
             style={{ ["--r" as string]: "8deg" }}
-            className="animate-float pointer-events-none absolute -right-6 top-24 z-20 w-28 mix-blend-screen" />
+            className="animate-float pointer-events-none absolute -right-8 top-0 z-20 w-28 mix-blend-screen" />
           <img src={boombox} alt="" aria-hidden width={816} height={816} loading="lazy"
             style={{ ["--r" as string]: "-10deg", animationDelay: "1s" }}
             className="animate-float pointer-events-none absolute -bottom-16 -left-10 z-20 w-28 mix-blend-screen" />
@@ -84,7 +84,7 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
             <span className="absolute left-5 top-4 rounded-full border-2 border-paper px-3 py-0.5 text-xs font-bold uppercase">x3</span>
             <span className="absolute bottom-4 right-5 rounded-full border-2 border-paper px-3 py-0.5 text-xs font-bold uppercase">wow</span>
             <p className="font-hand text-2xl text-sun">estás invitad@ al</p>
-            <h1 className="font-display text-[22vw] font-extrabold leading-[0.85] tracking-tighter sm:text-8xl">
+            <h1 className="font-title text-[26vw] leading-[0.82] tracking-[0.02em] sm:text-[7rem]">
               TRI<br />
               <span className="inline-block -rotate-3 text-lime">CUMPLE</span>
             </h1>
