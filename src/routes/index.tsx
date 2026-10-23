@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Invite } from "@/components/Invite";
+import { getCopy } from "@/lib/guests.functions";
 
 export const Route = createFileRoute("/")({
+  loader: () => getCopy(),
   head: () => ({
     meta: [
       { title: "Tricumple · Giuli, Manu y Martín" },
@@ -12,5 +14,5 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: () => <Invite mainPoster />,
+  component: () => <Invite mainPoster copy={Route.useLoaderData()} />,
 });

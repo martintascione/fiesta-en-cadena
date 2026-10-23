@@ -5,6 +5,8 @@ import { registerGuest, findGuest } from "@/lib/guests.functions";
 import boombox from "@/assets/glyph-boombox.png";
 import { Wristband } from "@/components/Wristband";
 import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
+import { DEFAULT_COPY, type Copy } from "@/lib/copy";
 
 function Splat({ className }: { className?: string }) {
   return (
@@ -22,7 +24,8 @@ const NAMES = [
   { name: "Martín", accent: "border-lime bg-lime/10 text-lime" },
 ];
 
-export function Invite({ refCode, inviterName, mainPoster = false }: { refCode?: string | undefined; inviterName?: string | null | undefined; mainPoster?: boolean }) {
+export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAULT_COPY }: { refCode?: string | undefined; inviterName?: string | null | undefined; mainPoster?: boolean; copy?: Copy }) {
+  const c = copy;
   const register = useServerFn(registerGuest);
   const find = useServerFn(findGuest);
   const [mode, setMode] = useState<"join" | "back">("join");
@@ -69,17 +72,18 @@ export function Invite({ refCode, inviterName, mainPoster = false }: { refCode?:
         {mainPoster ? !guest && <>
           <header className="night-top">
             <span className="night-brand">the<br />tricumple<br />stories<span className="night-dot">.</span></span>
-            <span className="night-tags"><span>Sáb 7/11 · 1:30 hs</span><span>Barra libre · $15.000</span><span>DJ invitado ;)</span></span>
+            <span className="night-tags">{[c.tag1, c.tag2, c.tag3].filter(Boolean).map((t) => <span key={t}>{t}</span>)}</span>
           </header>
           <section className="night-hero">
-            <p className="night-eyebrow">Estás invitad@ al</p>
-            <h1 className="night-title">Tri<svg aria-hidden className="night-spark" viewBox="0 0 100 100"><path d="M50 0 L58 40 L100 50 L58 60 L50 100 L42 60 L0 50 L42 40 Z" /></svg>cumple</h1>
-            <p className="night-dir"><span className="night-rule" aria-hidden />dir. Giu, Manuch &amp; Tincho</p>
-            <p className="night-synopsis">Tres cumples, una sola noche. Tres amigos juntan sus cumpleaños en una fiesta y todo se sale de control cuando la voz empieza a correr.</p>
+            <p className="night-eyebrow">{c.eyebrow}</p>
+            <h1 className="night-title">Tri<svg aria-hidden className="night-spark" viewBox="0 0 100 100"><path d="M50 0 L58 40 L100 50 L58 60 L50 100 L42 60 L0 50 L42 40 Z" /></svg>{c.title.slice(3)}</h1>
+            <p className="night-dir"><span className="night-rule" aria-hidden />{c.hosts}</p>
+            <p className="night-synopsis">{c.synopsis}</p>
+            {c.joke && <p className="night-joke">{c.joke}</p>}
             <dl className="night-info">
-              <div><dt>Cuándo</dt><dd>Sáb 7/11<br />1:30 hs<br /><small>la noche del viernes</small></dd></div>
-              <div><dt>Dónde</dt><dd>Niceto Vega<br />5635<br /><small>Palermo</small></dd></div>
-              <div><dt>Barra libre</dt><dd>$15.000<br /><small>toda la noche</small></dd></div>
+              <div><dt>Cuándo</dt><dd>{c.when}<br /><small>{c.whenNote}</small></dd></div>
+              <div><dt>Dónde</dt><dd>{c.where}<br /><small>{c.whereNote}</small></dd></div>
+              <div><dt>Barra libre</dt><dd>{c.bar}<br /><small>{c.barNote}</small></dd></div>
             </dl>
             <Countdown />
           </section>
@@ -145,14 +149,14 @@ export function Invite({ refCode, inviterName, mainPoster = false }: { refCode?:
               </p>
             )}
             {mainPoster ? (
-              <h2 className="night-h2">{mode === "join" ? <>Confirmá<br /><em>tu lugar.</em></> : <>Recuperá<br /><em>tu QR.</em></>}</h2>
+              <h2 className="night-h2">{mode === "join" ? <>{c.formTitle.split(" ")[0]}<br /><em>{c.formTitle.split(" ").slice(1).join(" ")}</em></> : <>Recuperá<br /><em>tu QR.</em></>}</h2>
             ) : (
               <h2 className="text-2xl font-extrabold leading-tight">
                 {mode === "join" ? "Confirmá y llevate tu QR" : "Recuperá tu QR"}
               </h2>
             )}
             <p className={mainPoster ? "night-sub" : "mt-1 text-muted-foreground"}>
-              {mode === "join" ? "Solo tu nombre y email. Nada más." : "Poné el email con el que te anotaste."}
+              {mode === "join" ? (mainPoster ? c.formSub : "Solo tu nombre y email. Nada más.") : "Poné el email con el que te anotaste."}
             </p>
             <form onSubmit={onSubmit} className="mt-6 space-y-3">
               {mode === "join" && (
@@ -163,8 +167,8 @@ export function Invite({ refCode, inviterName, mainPoster = false }: { refCode?:
                 aria-label="Email" className={mainPoster ? "night-input" : "h-14 w-full rounded-2xl border-2 border-input bg-transparent px-4 text-lg outline-none focus:border-ring"} />
               {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
               <Button disabled={loading} type="submit"
-                className={mainPoster ? "night-submit" : "h-14 w-full rounded-full bg-primary text-lg font-extrabold text-primary-foreground transition active:scale-95 disabled:opacity-60"}>
-                {loading ? "Un toque…" : mode === "join" ? (mainPoster ? "Voy seguro" : "¡Acepto la invitación! 🎉") : "Ver mi QR"}
+                className={mainPoster ? `night-submit${loading ? " is-loading" : ""}` : "h-14 w-full rounded-full bg-primary text-lg font-extrabold text-primary-foreground transition active:scale-95 disabled:opacity-60"}>
+                {loading ? (mainPoster ? c.buttonLoading : "Un toque…") : mode === "join" ? (mainPoster ? c.button : "¡Acepto la invitación! 🎉") : "Ver mi QR"}
               </Button>
             </form>
             <Button variant="link" onClick={() => { setMode(mode === "join" ? "back" : "join"); setError(""); }}
@@ -173,7 +177,8 @@ export function Invite({ refCode, inviterName, mainPoster = false }: { refCode?:
             </Button>
           </section>
         )}
-        {mainPoster && !guest && <footer className="night-foot"><span>Tricumple · una producción de Giu, Manuch y Tincho</span><span>Sábado 7/11 · Niceto Vega 5635</span></footer>}
+        {mainPoster && !guest && <footer className="night-foot"><span>{c.footLeft}</span><span>{c.footRight}</span></footer>}
+        {mainPoster && !guest && <p className="night-admin"><Link to="/admin">admin</Link></p>}
       </div>
     </main>
   );

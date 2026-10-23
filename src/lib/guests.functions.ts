@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { useSession } from "@tanstack/react-start/server";
 import { z } from "zod";
+import { COPY_FIELDS, mergeCopy } from "@/lib/copy";
 
 type GuestDTO = { fullName: string; email: string; inviteCode: string; qrToken: string; hasReceipt: boolean };
 
@@ -84,10 +85,13 @@ async function matches(a: string, b: string) {
 }
 
 export const adminLogin = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ password: z.string().max(200) }).parse(d))
+  .inputValidator((d) => z.object({ user: z.string().max(200), password: z.string().max(200) }).parse(d))
   .handler(async ({ data }) => {
+    const expectedUser = process.env["ADMIN_USER"];
     const expected = process.env["ADMIN_PASSWORD"];
-    if (!expected || !(await matches(data.password, expected))) return { ok: false };
+    if (!expectedUser || !expected) return { ok: false };
+    const [userOk, passOk] = await Promise.all([matches(data.user.trim(), expectedUser), matches(data.password, expected)]);
+    if (!userOk || !passOk) return { ok: false };
     const s = await useSession<{ admin?: boolean }>(sessionConfig());
     await s.update({ admin: true });
     return { ok: true };
@@ -148,4 +152,26 @@ export const confirmReceipt = createServerFn({ method: "POST" })
     if (!g || !data.path.startsWith(`${g.id}/`)) throw new Error("No autorizado");
     await db.from("guests").update({ receipt_path: data.path, receipt_uploaded_at: new Date().toISOString() }).eq("id", g.id);
     return { ok: true };
+  });
+
+export const getCopy = createServerFn({ method: "GET" }).handler(async () => {
+  try {
+    const db = await admin();
+    const { data } = await db.from("site_copy").select("key, value");
+    return mergeCopy(data);
+  } catch {
+    return mergeCopy(null);
+  }
+});
+
+export const saveCopy = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.record(z.string(), z.string().max(600)).parse(d))
+  .handler(async ({ data }) => {
+    const s = await useSession<{ admin?: boolean }>(sessionConfig());
+    if (!s.data.admin) return { ok: false };
+    const allowed = new Set<string>(COPY_FIELDS.map((f) => f.key));
+    const rows = Object.entries(data).filter(([k]) => allowed.has(k)).map(([key, value]) => ({ key, value, updated_at: new Date().toISOString() }));
+    const db = await admin();
+    const { error } = await db.from("site_copy").upsert(rows);
+    return { ok: !error };
   });
