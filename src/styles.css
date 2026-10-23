@@ -38,7 +38,7 @@
   --font-display: "Bricolage Grotesque", system-ui, sans-serif;
   --font-sans: "Bricolage Grotesque", system-ui, sans-serif;
   --font-hand: "Caveat", cursive;
-  --font-title: "Bagel Fat One", system-ui, sans-serif;
+  --font-title: "Archivo Black", system-ui, sans-serif;
 }
 
 :root {
@@ -100,13 +100,19 @@
   }
 }
 
-@utility title-pop {
-  -webkit-text-stroke: 2.5px var(--color-ink);
-  paint-order: stroke fill;
-  text-shadow:
-    0.055em 0.055em 0 var(--color-ink),
-    0.115em 0.115em 0 var(--color-tangerine);
+@utility poster-title {
+  font-size: 4rem;
+  line-height: 0.94;
+  letter-spacing: 0;
+  transform: rotate(-1deg);
+  @media (min-width: 640px) { font-size: 4.75rem; }
+  @media (max-width: 359px) { font-size: 3.4rem; }
 }
+
+@keyframes poster-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes poster-drift { 0%,100% { transform: translateY(0) rotate(var(--r,0deg)); } 50% { transform: translateY(-4px) rotate(var(--r,0deg)); } }
+@utility animate-poster-enter { animation: poster-enter .65s ease-out both; }
+@utility animate-poster-drift { animation: poster-drift 9s ease-in-out infinite; }
 
 @keyframes float { 0%,100% { transform: translateY(0) rotate(var(--r,0deg)); } 50% { transform: translateY(-14px) rotate(calc(var(--r,0deg) + 4deg)); } }
 @keyframes spin-slow { to { transform: rotate(360deg); } }
@@ -125,4 +131,8 @@
 @utility band-perf {
   &::before, &::after { content: ""; position: absolute; left: -11px; width: 20px; height: 20px; border-radius: 9999px; background: var(--background); }
   &::before { top: -10px; } &::after { bottom: -10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
 }
