@@ -25,6 +25,20 @@ const NAMES = [
   { name: "Tincho", accent: "border-lime bg-lime/10 text-lime" },
 ];
 
+const HIGHLIGHT = "barra libre";
+
+function Synopsis({ text }: { text: string }) {
+  const i = text.toLowerCase().indexOf(HIGHLIGHT);
+  if (i < 0) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, i)}
+      <span className="night-chip">{text.slice(i, i + HIGHLIGHT.length)}</span>
+      {text.slice(i + HIGHLIGHT.length)}
+    </>
+  );
+}
+
 export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAULT_COPY }: { refCode?: string | undefined; inviterName?: string | null | undefined; mainPoster?: boolean; copy?: Copy }) {
   const c = copy;
   const register = useServerFn(registerGuest);
@@ -79,7 +93,7 @@ export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAUL
             <p className="night-eyebrow">{c.eyebrow}</p>
             <h1 className="night-title">Tri<svg aria-hidden className="night-spark" viewBox="0 0 100 100"><path d="M50 0 L58 40 L100 50 L58 60 L50 100 L42 60 L0 50 L42 40 Z" /></svg>{c.title.slice(3)}</h1>
             <p className="night-dir"><span className="night-rule" aria-hidden />{c.hosts}</p>
-            <p className="night-synopsis">{c.synopsis}</p>
+            <p className="night-synopsis"><Synopsis text={c.synopsis} /></p>
             {c.joke && <p className="night-joke">{c.joke}</p>}
             <dl className="night-info">
               <div><dt>Cuándo</dt><dd>{c.when}<br /><small>{c.whenNote}</small></dd></div>
