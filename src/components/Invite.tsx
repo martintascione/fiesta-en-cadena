@@ -7,6 +7,7 @@ import { Wristband } from "@/components/Wristband";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { DEFAULT_COPY, type Copy } from "@/lib/copy";
+import { Playlist } from "@/components/Playlist";
 
 function Splat({ className }: { className?: string }) {
   return (
@@ -177,6 +178,7 @@ export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAUL
             </Button>
           </section>
         )}
+        {mainPoster && !guest && <Playlist variant="poster" />}
         {mainPoster && !guest && <footer className="night-foot"><span>{c.footLeft}</span><span>{c.footRight}</span></footer>}
         {mainPoster && !guest && <p className="night-admin"><Link to="/admin">admin</Link></p>}
       </div>
@@ -243,6 +245,8 @@ function Ticket({ guest }: { guest: Guest }) {
       </div>
 
       <Wristband qrToken={guest.qrToken} initialDone={guest.hasReceipt} />
+
+      <Playlist qrToken={guest.qrToken} variant="ticket" />
 
 
 

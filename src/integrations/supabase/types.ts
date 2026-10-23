@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      song_requests: {
+        Row: { id: string; guest_id: string; spotify_id: string; title: string; artist: string; cover_url: string | null; created_at: string }
+        Insert: { id?: string; guest_id: string; spotify_id: string; title: string; artist: string; cover_url?: string | null; created_at?: string }
+        Update: { id?: string; guest_id?: string; spotify_id?: string; title?: string; artist?: string; cover_url?: string | null; created_at?: string }
+        Relationships: [{ foreignKeyName: "song_requests_guest_id_fkey"; columns: ["guest_id"]; isOneToOne: false; referencedRelation: "guests"; referencedColumns: ["id"] }]
+      }
       site_copy: {
         Row: { key: string; value: string; updated_at: string }
         Insert: { key: string; value: string; updated_at?: string }

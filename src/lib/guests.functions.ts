@@ -175,3 +175,99 @@ export const saveCopy = createServerFn({ method: "POST" })
     const { error } = await db.from("site_copy").upsert(rows);
     return { ok: !error };
   });
+
+/* ---------- Spotify: búsqueda con client credentials (sin login del invitado) ---------- */
+export type Song = { id: string; title: string; artist: string; cover: string | null; url: string };
+const MAX_SONGS = 5;
+let spotifyToken: { value: string; exp: number } | null = null;
+
+async function spotifyAccessToken() {
+  if (spotifyToken && spotifyToken.exp > Date.now() + 30_000) return spotifyToken.value;
+  const id = process.env["SPOTIFY_CLIENT_ID"], secret = process.env["SPOTIFY_CLIENT_SECRET"];
+  if (!id || !secret) throw new Error("Spotify no configurado");
+  const res = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded", Authorization: "Basic " + btoa(`${id}:${secret}`) },
+    body: "grant_type=client_credentials",
+  });
+  if (!res.ok) throw new Error("Spotify auth falló");
+  const j = (await res.json()) as { access_token: string; expires_in: number };
+  spotifyToken = { value: j.access_token, exp: Date.now() + j.expires_in * 1000 };
+  return j.access_token;
+}
+
+export const searchSongs = createServerFn({ method: "GET" })
+  .inputValidator((d) => z.object({ q: z.string().trim().min(2).max(80) }).parse(d))
+  .handler(async ({ data }): Promise<Song[]> => {
+    const token = await spotifyAccessToken();
+    const url = `https://api.spotify.com/v1/search?type=track&limit=8&market=AR&q=${encodeURIComponent(data.q)}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) return [];
+    const j = (await res.json()) as { tracks?: { items?: Array<{ id: string; name: string; artists: { name: string }[]; album: { images: { url: string; width: number }[] }; external_urls: { spotify: string } }> } };
+    return (j.tracks?.items ?? []).map((t) => ({
+      id: t.id,
+      title: t.name,
+      artist: t.artists.map((a) => a.name).join(", "),
+      cover: t.album.images.sort((a, b) => a.width - b.width)[0]?.url ?? null,
+      url: t.external_urls.spotify,
+    }));
+  });
+
+async function guestByToken(qrToken: string) {
+  const db = await admin();
+  const { data: g } = await db.from("guests").select("id").eq("qr_token", qrToken).maybeSingle();
+  return g?.id ?? null;
+}
+
+export const mySongs = createServerFn({ method: "GET" })
+  .inputValidator((d) => z.object({ qrToken: tokenSchema }).parse(d))
+  .handler(async ({ data }): Promise<Song[]> => {
+    const gid = await guestByToken(data.qrToken);
+    if (!gid) return [];
+    const db = await admin();
+    const { data: rows } = await db.from("song_requests").select("*").eq("guest_id", gid).order("created_at");
+    return (rows ?? []).map((r) => ({ id: r.spotify_id, title: r.title, artist: r.artist, cover: r.cover_url, url: `https://open.spotify.com/track/${r.spotify_id}` }));
+  });
+
+export const addSongs = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({
+    qrToken: tokenSchema,
+    songs: z.array(z.object({ id: z.string().max(40), title: z.string().max(200), artist: z.string().max(200), cover: z.string().url().nullable() })).max(MAX_SONGS),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    const gid = await guestByToken(data.qrToken);
+    if (!gid) return { ok: false, reason: "guest" as const };
+    const db = await admin();
+    const { count } = await db.from("song_requests").select("id", { count: "exact", head: true }).eq("guest_id", gid);
+    if ((count ?? 0) + data.songs.length > MAX_SONGS) return { ok: false, reason: "max" as const };
+    const { error } = await db.from("song_requests").upsert(
+      data.songs.map((s) => ({ guest_id: gid, spotify_id: s.id, title: s.title, artist: s.artist, cover_url: s.cover })),
+      { onConflict: "guest_id,spotify_id", ignoreDuplicates: true },
+    );
+    return { ok: !error, reason: null };
+  });
+
+export const removeSong = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ qrToken: tokenSchema, spotifyId: z.string().max(40) }).parse(d))
+  .handler(async ({ data }) => {
+    const gid = await guestByToken(data.qrToken);
+    if (!gid) return { ok: false };
+    const db = await admin();
+    const { error } = await db.from("song_requests").delete().eq("guest_id", gid).eq("spotify_id", data.spotifyId);
+    return { ok: !error };
+  });
+
+export const adminSongs = createServerFn({ method: "GET" }).handler(async () => {
+  const s = await useSession<{ admin?: boolean }>(sessionConfig());
+  if (!s.data.admin) return [];
+  const db = await admin();
+  const { data: rows } = await db.from("song_requests").select("spotify_id, title, artist, cover_url, created_at, guests(full_name)").order("created_at");
+  const grouped = new Map<string, { id: string; title: string; artist: string; cover: string | null; by: string[] }>();
+  for (const r of rows ?? []) {
+    const g = grouped.get(r.spotify_id) ?? { id: r.spotify_id, title: r.title, artist: r.artist, cover: r.cover_url, by: [] };
+    const who = (r as unknown as { guests: { full_name: string } | null }).guests?.full_name;
+    if (who) g.by.push(who);
+    grouped.set(r.spotify_id, g);
+  }
+  return [...grouped.values()].sort((a, b) => b.by.length - a.by.length);
+});

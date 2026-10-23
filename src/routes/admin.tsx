@@ -1,11 +1,11 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { adminList, adminLogin, adminLogout, getCopy, saveCopy } from "@/lib/guests.functions";
+import { adminList, adminLogin, adminLogout, adminSongs, getCopy, saveCopy } from "@/lib/guests.functions";
 import { COPY_FIELDS, type Copy } from "@/lib/copy";
 
 export const Route = createFileRoute("/admin")({
-  loader: async () => { const [list, copy] = await Promise.all([adminList(), getCopy()]); return { ...list, copy }; },
+  loader: async () => { const [list, copy, songs] = await Promise.all([adminList(), getCopy(), adminSongs()]); return { ...list, copy, songs }; },
   head: () => ({
     meta: [
       { title: "Panel · Tricumple" },
@@ -81,6 +81,7 @@ function Admin() {
         </div>
       </div>
       <CopyEditor initial={data.copy} />
+      <SongList songs={data.songs} />
       <div className="mt-8 grid grid-cols-3 gap-2">
         {[["Invitados", data.guests.length, "bg-sky"], ["Barra libre", paid, "bg-lime"], ["Por referidos", referred, "bg-bubble"]].map(([l, n, c]) => (
           <div key={String(l)} className={`rounded-2xl p-4 text-ink ${c}`}>
@@ -160,6 +161,37 @@ function CopyEditor({ initial }: { initial: Copy }) {
             {state === "err" && <span className="text-sm text-destructive">No se pudo guardar.</span>}
           </div>
         </form>
+      )}
+    </section>
+  );
+}
+
+function SongList({ songs }: { songs: { id: string; title: string; artist: string; cover: string | null; by: string[] }[] }) {
+  const [open, setOpen] = useState(false);
+  const copyIds = () => navigator.clipboard.writeText(songs.map((s) => `spotify:track:${s.id}`).join("\n"));
+  return (
+    <section className="mt-4 rounded-2xl bg-card p-4">
+      <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-left">
+        <span className="text-lg font-bold">Playlist pedida <span className="text-lime">{songs.length}</span></span>
+        <span className="text-sm text-muted-foreground">{open ? "Cerrar" : "Ver"}</span>
+      </button>
+      {open && (
+        <div className="mt-4 space-y-2">
+          {songs.length > 0 && (
+            <button onClick={copyIds} className="text-sm text-muted-foreground underline">Copiar URIs para pegar en una playlist de Spotify</button>
+          )}
+          {songs.map((s) => (
+            <div key={s.id} className="flex items-center gap-3 rounded-xl bg-muted/40 p-2">
+              {s.cover && <img src={s.cover} alt="" className="h-10 w-10 rounded-lg" />}
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-bold">{s.title} <span className="font-normal text-muted-foreground">· {s.artist}</span></p>
+                <p className="truncate text-xs text-muted-foreground">{s.by.length} {s.by.length === 1 ? "pedido" : "pedidos"} · {s.by.join(", ")}</p>
+              </div>
+              <a href={`https://open.spotify.com/track/${s.id}`} target="_blank" rel="noreferrer" className="rounded-full bg-lime px-3 py-1 text-xs font-extrabold text-ink">Abrir</a>
+            </div>
+          ))}
+          {songs.length === 0 && <p className="text-muted-foreground">Todavía nadie pidió temas.</p>}
+        </div>
       )}
     </section>
   );

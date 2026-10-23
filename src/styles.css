@@ -265,4 +265,40 @@
 .night-admin a { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--night-paper); opacity: .22; text-decoration: none; }
 .night-admin a:hover { opacity: .6; }
 
+/* ---------- Playlist (Spotify) ---------- */
+.playlist { position: relative; z-index: 2; animation: night-in .8s ease-out both; }
+.playlist-poster { width: calc(100% - 40px); max-width: 460px; margin: 18px auto 0; padding: 26px 22px 24px; background: #1b1b1b; border: 1.5px solid rgba(239,233,220,.14); border-radius: 2rem; color: #efe9dc; font-family: "Poppins", system-ui, sans-serif; }
+.playlist-ticket { margin-top: 0; padding: 24px; border-radius: 2rem; background: #1DB954; color: #0b0b0b; font-family: var(--font-sans); }
+.playlist-kicker { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; opacity: .7; }
+.playlist-title { margin-top: 6px; font-weight: 800; font-size: clamp(26px, 7vw, 36px); line-height: .98; letter-spacing: -.04em; }
+.playlist-poster .playlist-title em { font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-weight: 400; letter-spacing: 0; color: #1DB954; }
+.playlist-ticket .playlist-title em { font-family: var(--font-hand); font-style: normal; font-weight: 400; letter-spacing: 0; font-size: 1.15em; }
+.playlist-sub { margin-top: 8px; font-size: 14px; line-height: 1.35; opacity: .85; }
+.playlist-search { position: relative; margin-top: 16px; }
+.playlist-search svg { position: absolute; left: 14px; top: 50%; width: 20px; height: 20px; transform: translateY(-50%); fill: #1DB954; }
+.playlist-ticket .playlist-search svg { fill: #0b0b0b; }
+.playlist-search input { width: 100%; height: 52px; padding: 0 44px 0 44px; border-radius: 9999px; border: 2px solid rgba(239,233,220,.25); background: transparent; color: inherit; font: inherit; font-size: 15px; outline: none; }
+.playlist-ticket .playlist-search input { border-color: rgba(11,11,11,.35); background: rgba(255,255,255,.35); }
+.playlist-search input::placeholder { color: inherit; opacity: .5; }
+.playlist-search input:focus { border-color: #1DB954; }
+.playlist-ticket .playlist-search input:focus { border-color: #0b0b0b; }
+.playlist-busy { position: absolute; right: 16px; top: 50%; width: 14px; height: 14px; margin-top: -7px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: playlist-spin .7s linear infinite; }
+@keyframes playlist-spin { to { transform: rotate(360deg); } }
+.playlist-results, .playlist-picked { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.playlist-results button, .playlist-picked li { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 10px; border-radius: 14px; background: rgba(255,255,255,.06); border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.playlist-ticket .playlist-results button, .playlist-ticket .playlist-picked li { background: rgba(11,11,11,.12); }
+.playlist-results button:hover { background: rgba(29,185,84,.18); }
+.playlist-results img, .playlist-picked img, .playlist-noimg { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; flex: none; background: rgba(255,255,255,.1); }
+.playlist-results span:not(.playlist-noimg), .playlist-picked li > span:not(.playlist-noimg):not(.playlist-n) { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.playlist-results b, .playlist-picked b { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.playlist-results small, .playlist-picked small { font-size: 12px; opacity: .7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.playlist-results i { font-style: normal; font-weight: 700; font-size: 20px; color: #1DB954; }
+.playlist-ticket .playlist-results i { color: #0b0b0b; }
+.playlist-n { width: 22px; font-size: 12px; font-weight: 700; opacity: .6; flex: none; }
+.playlist-picked button { margin-left: auto; width: 30px; height: 30px; border-radius: 50%; border: 0; background: rgba(255,255,255,.1); color: inherit; font-size: 18px; line-height: 1; cursor: pointer; }
+.playlist-ticket .playlist-picked button { background: rgba(11,11,11,.15); }
+.playlist-msg { margin-top: 10px; font-size: 13px; font-weight: 600; color: #ea3418; }
+.playlist-ticket .playlist-msg { color: #0b0b0b; }
+.playlist-note { margin-top: 10px; font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-size: 14px; opacity: .75; }
+
 @keyframes night-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
