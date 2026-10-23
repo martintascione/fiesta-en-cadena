@@ -17,11 +17,7 @@ function Splat({ className }: { className?: string }) {
 
 type Guest = { fullName: string; email: string; inviteCode: string; qrToken: string; hasReceipt: boolean };
 
-const NAMES = [
-  { n: "Giuli", c: "bg-sky", r: "-6deg" },
-  { n: "Manu", c: "bg-bubble", r: "5deg" },
-  { n: "Martín", c: "bg-sun", r: "-3deg" },
-];
+const NAMES = ["Giuli", "Manu", "Martín"];
 
 export function Invite({ refCode, inviterName }: { refCode?: string | undefined; inviterName?: string | null | undefined }) {
   const register = useServerFn(registerGuest);
@@ -56,58 +52,49 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
 
   return (
     <main className="grain min-h-[100dvh] overflow-hidden">
-      {/* blobs */}
-      <div aria-hidden className="pointer-events-none fixed inset-0">
-        <div className="animate-wobble absolute -left-24 -top-24 h-72 w-72 bg-sky opacity-40 blur-3xl" />
-        <div className="animate-wobble absolute -right-20 top-1/3 h-72 w-72 bg-bubble opacity-30 blur-3xl" />
-        <div className="animate-wobble absolute -bottom-24 left-1/4 h-80 w-80 bg-lime opacity-25 blur-3xl" />
-      </div>
-
       <div className="relative mx-auto flex max-w-md flex-col px-5 pb-16 pt-[max(2rem,env(safe-area-inset-top))]">
         {/* top labels */}
-        <div className="flex items-center justify-between text-[10px] font-extrabold uppercase leading-tight tracking-wider">
-          <span className="rounded-lg border-2 border-paper px-2 py-1">proyecto<br />x3</span>
-          <span className="text-lg tracking-[0.4em]">✦✦✦</span>
+        <div className="flex items-center justify-between border-b border-paper/25 pb-4 text-[10px] font-bold uppercase leading-tight">
+          <span>proyecto<br />x3</span>
+          <span className="text-lg">✦✦✦</span>
           <span className="text-right">una fiesta<br />que todavía<br />no empezó</span>
         </div>
 
         {/* Hero sticker */}
         <section className="relative mt-6">
-          <Splat className="animate-spin-slow absolute -left-10 -top-10 z-0 h-40 w-40 text-tangerine" />
+          <Splat className="absolute -left-4 top-2 z-0 h-16 w-16 -rotate-12 text-sun" />
           <img src={gnome} alt="" aria-hidden width={816} height={816}
             style={{ ["--r" as string]: "8deg" }}
-            className="animate-float pointer-events-none absolute -right-8 top-0 z-20 w-28 mix-blend-screen" />
+            className="animate-poster-drift pointer-events-none absolute -right-4 -top-1 z-20 w-24 grayscale mix-blend-screen" />
           <img src={boombox} alt="" aria-hidden width={816} height={816} loading="lazy"
             style={{ ["--r" as string]: "-10deg", animationDelay: "1s" }}
-            className="animate-float pointer-events-none absolute -bottom-16 -left-10 z-20 w-28 mix-blend-screen" />
-          <div className="animate-pop sticker animate-wobble relative z-10 mx-auto bg-ink px-4 py-10 text-center">
-            <span className="absolute left-5 top-4 rounded-full border-2 border-paper px-3 py-0.5 text-xs font-bold uppercase">x3</span>
-            <span className="absolute bottom-4 right-5 rounded-full border-2 border-paper px-3 py-0.5 text-xs font-bold uppercase">wow</span>
-            <p className="font-hand text-2xl text-sun">estás invitad@ al</p>
-            <h1 className="font-title text-[16vw] leading-[0.95] sm:text-[6.5rem]">
-              <span className="title-pop inline-block rotate-2 text-paper">TRI</span>
+            className="animate-poster-drift pointer-events-none absolute -bottom-12 -left-5 z-20 w-24 grayscale mix-blend-screen" />
+          <div className="animate-poster-enter relative z-10 mx-auto py-14 text-center">
+            <span className="absolute bottom-2 right-0 text-xs font-bold uppercase">wow</span>
+            <p className="mb-4 text-xs font-bold uppercase">estás invitad@ al</p>
+            <h1 className="poster-title font-title text-paper">
+              <span className="inline-block">TRI</span>
               <br />
-              <span className="title-pop inline-block -rotate-3 text-lime">CUMPLE</span>
+              <span className="inline-block">CUMPLE</span>
             </h1>
           </div>
-          <div className="mt-6 flex justify-center gap-2">
-            {NAMES.map((x, i) => (
+          <div className="mt-4 flex justify-center gap-2">
+            {NAMES.map((name) => (
               <span
-                key={x.n}
-                style={{ ["--r" as string]: x.r, animationDelay: `${i * 0.4}s` }}
-                className={`animate-float ${x.c} sticker rounded-full px-4 py-2 text-lg font-extrabold text-ink`}
+                key={name}
+                className="rounded-full border border-paper/60 px-4 py-1.5 text-sm font-semibold text-paper"
               >
-                {x.n}
+                {name}
               </span>
             ))}
           </div>
         </section>
 
         <img src={rabbit} alt="" aria-hidden width={816} height={816} loading="lazy"
-          className="animate-hop pointer-events-none relative z-10 -mb-10 mt-2 w-28 self-end mix-blend-screen" />
+          className="animate-poster-drift pointer-events-none relative z-10 -mb-10 mt-2 w-24 self-end grayscale mix-blend-screen" />
         {/* marquee */}
-        <div className="-mx-5 mt-8 -rotate-2 overflow-hidden bg-sun py-2 text-ink">
-          <div className="animate-marquee flex w-max gap-8 whitespace-nowrap text-xl font-extrabold uppercase">
+        <div className="-mx-5 mt-8 overflow-hidden border-y border-paper/25 py-3 text-paper">
+          <div className="animate-marquee flex w-max gap-8 whitespace-nowrap text-xs font-bold uppercase [animation-duration:40s]">
             {Array.from({ length: 2 }).flatMap((_, k) =>
               ["3 cumples", "★", "1 fiesta", "★", "traé amigos", "★", "fecha y lugar muy pronto", "★"].map((t, i) => (
                 <span key={`${k}-${i}`}>{t}</span>
@@ -119,13 +106,13 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
         {guest ? (
           <Ticket guest={guest} />
         ) : (
-          <section className="animate-pop mt-10 rounded-[2rem] bg-card p-6" style={{ animationDelay: ".2s" }}>
+          <section className="animate-poster-enter mt-10 rounded-lg bg-card p-6" style={{ animationDelay: ".2s" }}>
             {inviterName && (
-              <p className="mb-4 inline-block -rotate-1 rounded-xl bg-bubble px-3 py-1 font-bold text-ink">
+              <p className="mb-4 inline-block rounded-full border border-paper/40 px-3 py-1 text-sm font-semibold text-paper">
                 👋 Te invitó {inviterName}
               </p>
             )}
-            <h2 className="text-3xl font-extrabold leading-tight">
+            <h2 className="text-2xl font-extrabold leading-tight">
               {mode === "join" ? "Confirmá y llevate tu QR" : "Recuperá tu QR"}
             </h2>
             <p className="mt-1 text-muted-foreground">
@@ -172,7 +159,7 @@ function Ticket({ guest }: { guest: Guest }) {
 
   return (
     <section className="mt-10 space-y-6">
-      <div className="animate-pop sticker rounded-[2rem] bg-paper p-6 text-center text-ink">
+      <div className="animate-poster-enter sticker rounded-[2rem] bg-paper p-6 text-center text-ink">
         <p className="font-hand text-3xl">¡Adentro, {first}!</p>
         <div className="mx-auto mt-4 w-fit rounded-3xl bg-sun p-4">
           <QRCodeSVG value={`TRICUMPLE:${guest.qrToken}`} size={220} bgColor="transparent" />
@@ -188,7 +175,7 @@ function Ticket({ guest }: { guest: Guest }) {
 
 
 
-      <div className="animate-pop rounded-[2rem] bg-lime p-6 text-ink" style={{ animationDelay: ".25s" }}>
+      <div className="animate-poster-enter rounded-[2rem] bg-lime p-6 text-ink" style={{ animationDelay: ".25s" }}>
         <p className="font-hand text-2xl">tu link personal</p>
         <h3 className="text-3xl font-extrabold leading-tight">Podés invitar a 2 o 3 amigos 🙌</h3>
         <p className="mt-1 font-medium">Este link es solo tuyo: así sabemos que vienen de tu parte.</p>
