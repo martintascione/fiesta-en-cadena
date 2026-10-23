@@ -54,8 +54,8 @@ export function Invite({ refCode, inviterName, mainPoster = false }: { refCode?:
   }
 
   return (
-    <main className={mainPoster && !guest ? "invitation-print min-h-[100dvh] overflow-hidden" : "grain min-h-[100dvh] overflow-hidden"}>
-      {mainPoster && !guest && <svg aria-hidden className="print-filter" width="0" height="0"><defs><filter id="blur-print" x="-10%" y="-15%" width="120%" height="130%" colorInterpolationFilters="sRGB"><feGaussianBlur stdDeviation="2" /><feComponentTransfer result="print-edge"><feFuncA type="linear" slope="8" intercept="-3.5" /></feComponentTransfer><feComposite in="SourceGraphic" in2="print-edge" operator="atop" /></filter></defs></svg>}
+    <main className={mainPoster && !guest ? "poster-night min-h-[100dvh] overflow-hidden" : "grain min-h-[100dvh] overflow-hidden"}>
+      {mainPoster && !guest && <div aria-hidden className="night-photo" />}
       {!mainPoster && <div aria-hidden className="sand-field pointer-events-none fixed inset-0 overflow-hidden">
         {Array.from({ length: 90 }, (_, i) => (
           <span key={i} className="sand-particle" style={{
@@ -66,15 +66,29 @@ export function Invite({ refCode, inviterName, mainPoster = false }: { refCode?:
           }} />
         ))}
       </div>}
-      <div className={mainPoster && !guest ? "print-layout relative mx-auto flex flex-col" : "relative mx-auto flex max-w-md flex-col px-5 pb-16 pt-[max(2rem,env(safe-area-inset-top))]"}>
-        {mainPoster ? !guest && <section className="print-hero relative text-center">
-          {["one", "two", "three"].map(position => <svg key={position} aria-hidden viewBox="0 0 100 100" className={`print-star print-star-${position}`} fill="currentColor"><path d="M50 0Q54 44 100 50Q54 56 50 100Q46 56 0 50Q46 44 50 0Z" /></svg>)}
-          <div aria-hidden className="print-stamp"><span>¡FIESTA!</span></div>
-          <p className="print-eyebrow">estás invitad@ al</p>
-          <h1 className="print-title" aria-label="TRICUMPLE"><span>TRI</span><span>CUM<span className="print-accent">P</span>LE</span></h1>
-          <p className="print-names">Giuli · Manu · Martín</p>
-          <span aria-hidden className="print-label">TRICUMPLE</span>
-        </section> : <>
+      <div className={mainPoster && !guest ? "night-layout relative mx-auto flex flex-col" : "relative mx-auto flex max-w-md flex-col px-5 pb-16 pt-[max(2rem,env(safe-area-inset-top))]"}>
+        {mainPoster ? !guest && <>
+          <header className="night-top">
+            <span className="night-brand">Tricumple<sup>3</sup></span>
+            <span>Coming soon</span>
+          </header>
+          <section className="night-hero">
+            <p className="night-eyebrow">Estás invitad@ al</p>
+            <h1 className="night-title" aria-label="Tricumple, Giuli, Manu y Martín">
+              <span aria-hidden>Tri</span><span aria-hidden>cumple</span>
+              <span aria-hidden className="night-stroke">
+                <svg viewBox="0 0 420 160"><path d="M18 118 C 70 60, 120 40, 180 70 S 260 140, 330 90 S 390 30, 405 48" /></svg>
+              </span>
+              <span aria-hidden className="night-scrawl">Giuli Manu Martín</span>
+            </h1>
+          </section>
+          <section className="night-block">
+            <p className="night-k">Save the date</p>
+            <p className="night-big">The real<br />night.</p>
+            <p className="night-date">Muy pronto</p>
+            <p className="night-meta">Fecha · Lugar · Hora<br />Buenos Aires</p>
+          </section>
+        </> : <>
         {/* top labels */}
         <div className="flex items-center justify-between border-b border-paper/25 pb-4 text-[10px] font-bold uppercase leading-tight">
           <span>proyecto<br />x3</span>
@@ -123,37 +137,42 @@ export function Invite({ refCode, inviterName, mainPoster = false }: { refCode?:
         {guest ? (
           <Ticket guest={guest} />
         ) : (
-          <section className={`animate-poster-enter mt-10 rounded-lg bg-card p-6 ${mainPoster ? "registration-original w-full max-w-[408px] self-center font-sans text-foreground" : ""}`}>
+          <section className={mainPoster ? "night-rsvp animate-poster-enter" : "animate-poster-enter mt-10 rounded-lg bg-card p-6"}>
             {inviterName && (
               <p className="mb-4 inline-block rounded-full border border-paper/40 px-3 py-1 text-sm font-semibold text-paper">
                 👋 Te invitó {inviterName}
               </p>
             )}
-            <h2 className="text-2xl font-extrabold leading-tight">
-              {mode === "join" ? "Confirmá y llevate tu QR" : "Recuperá tu QR"}
-            </h2>
-            <p className="mt-1 text-muted-foreground">
+            {mainPoster ? (
+              <h2 className="night-h2">{mode === "join" ? <>Confirmá<br /><em>tu lugar.</em></> : <>Recuperá<br /><em>tu QR.</em></>}</h2>
+            ) : (
+              <h2 className="text-2xl font-extrabold leading-tight">
+                {mode === "join" ? "Confirmá y llevate tu QR" : "Recuperá tu QR"}
+              </h2>
+            )}
+            <p className={mainPoster ? "night-sub" : "mt-1 text-muted-foreground"}>
               {mode === "join" ? "Solo tu nombre y email. Nada más." : "Poné el email con el que te anotaste."}
             </p>
             <form onSubmit={onSubmit} className="mt-6 space-y-3">
               {mode === "join" && (
                 <input name="fullName" required maxLength={100} autoComplete="name" placeholder="Nombre y apellido"
-                  aria-label="Nombre y apellido" className="h-14 w-full rounded-2xl border-2 border-input bg-transparent px-4 text-lg outline-none focus:border-ring" />
+                  aria-label="Nombre y apellido" className={mainPoster ? "night-input" : "h-14 w-full rounded-2xl border-2 border-input bg-transparent px-4 text-lg outline-none focus:border-ring"} />
               )}
               <input name="email" type="email" required maxLength={255} autoComplete="email" inputMode="email" placeholder="tu@email.com"
-                aria-label="Email" className="h-14 w-full rounded-2xl border-2 border-input bg-transparent px-4 text-lg outline-none focus:border-ring" />
+                aria-label="Email" className={mainPoster ? "night-input" : "h-14 w-full rounded-2xl border-2 border-input bg-transparent px-4 text-lg outline-none focus:border-ring"} />
               {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
               <Button disabled={loading} type="submit"
-                className="h-14 w-full rounded-full bg-primary text-lg font-extrabold text-primary-foreground transition active:scale-95 disabled:opacity-60">
-                {loading ? "Un toque…" : mode === "join" ? "¡Acepto la invitación! 🎉" : "Ver mi QR"}
+                className={mainPoster ? "night-submit" : "h-14 w-full rounded-full bg-primary text-lg font-extrabold text-primary-foreground transition active:scale-95 disabled:opacity-60"}>
+                {loading ? "Un toque…" : mode === "join" ? (mainPoster ? "Voy seguro" : "¡Acepto la invitación! 🎉") : "Ver mi QR"}
               </Button>
             </form>
             <Button variant="link" onClick={() => { setMode(mode === "join" ? "back" : "join"); setError(""); }}
-              className="mt-4 w-full text-center text-sm font-semibold text-secondary underline underline-offset-4">
+              className={mainPoster ? "night-recovery" : "mt-4 w-full text-center text-sm font-semibold text-secondary underline underline-offset-4"}>
               {mode === "join" ? "Ya me anoté, quiero ver mi QR" : "Todavía no me anoté"}
             </Button>
           </section>
         )}
+        {mainPoster && !guest && <footer className="night-foot"><span>Tricumple³</span><span>Giuli · Manu · Martín</span></footer>}
       </div>
     </main>
   );
