@@ -26,7 +26,7 @@ function Admin() {
   const router = useRouter();
   const login = useServerFn(adminLogin);
   const logout = useServerFn(adminLogout);
-  const [err, setErr] = useState<string | null>(null);
+  const [err, setErr] = useState("");
   const [entering, setEntering] = useState(false);
   const [filter, setFilter] = useState<"all" | "paid" | "unpaid">("all");
   const [q, setQ] = useState("");
@@ -39,23 +39,17 @@ function Admin() {
           onSubmit={async (e) => {
             e.preventDefault();
             if (entering) return;
-            setErr(null);
-            setEntering(true);
             const fd = new FormData(e.currentTarget);
+            setErr("");
+            setEntering(true);
             try {
               const r = await login({ data: { user: String(fd.get("user")), password: String(fd.get("password")) } });
-              if (!r.ok) {
-                setErr("Usuario o contraseña incorrectos");
-                return;
-              }
+              if (!r.ok) { setErr(r.reason ?? "Usuario o contraseña incorrectos"); return; }
               const session = await adminList();
-              if (!session.authorized) {
-                setErr("El navegador no pudo mantener el acceso. Abrí el panel en una pestaña nueva y probá otra vez.");
-                return;
-              }
+              if (!session.authorized) { setErr("El navegador no pudo mantener el acceso. Abrí el panel en una pestaña nueva y probá otra vez."); return; }
               await router.invalidate();
-            } catch {
-              setErr("No se pudo entrar. Probá otra vez.");
+            } catch (ex) {
+              setErr(`Error del servidor: ${ex instanceof Error ? ex.message : "desconocido"}`);
             } finally {
               setEntering(false);
             }

@@ -92,12 +92,18 @@ export const adminLogin = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const expectedUser = process.env["ADMIN_USER"];
     const expected = process.env["ADMIN_PASSWORD"];
-    if (!expectedUser || !expected) return { ok: false };
-    const [userOk, passOk] = await Promise.all([matches(data.user.trim(), expectedUser), matches(data.password, expected)]);
-    if (!userOk || !passOk) return { ok: false };
-    const s = await useSession<{ admin?: boolean }>(sessionConfig());
-    await s.update({ admin: true });
-    return { ok: true };
+    const secret = process.env["SESSION_SECRET"];
+    const missing = [!expectedUser && "ADMIN_USER", !expected && "ADMIN_PASSWORD", (!secret || secret.length < 32) && "SESSION_SECRET (mín. 32 caracteres)"].filter(Boolean) as string[];
+    if (missing.length) return { ok: false, reason: `Faltan configurar: ${missing.join(", ")}` };
+    const [userOk, passOk] = await Promise.all([matches(data.user.trim(), expectedUser!), matches(data.password, expected!)]);
+    if (!userOk || !passOk) return { ok: false, reason: "Usuario o contraseña incorrectos" };
+    try {
+      const s = await useSession<{ admin?: boolean }>(sessionConfig());
+      await s.update({ admin: true });
+      return { ok: true, reason: null };
+    } catch (e) {
+      return { ok: false, reason: `No se pudo crear la sesión: ${e instanceof Error ? e.message : "error"}` };
+    }
   });
 
 export const adminLogout = createServerFn({ method: "POST" }).handler(async () => {
@@ -106,9 +112,17 @@ export const adminLogout = createServerFn({ method: "POST" }).handler(async () =
   return { ok: true };
 });
 
+async function isAdmin() {
+  try {
+    const s = await useSession<{ admin?: boolean }>(sessionConfig());
+    return !!s.data.admin;
+  } catch {
+    return false;
+  }
+}
+
 export const adminList = createServerFn({ method: "GET" }).handler(async () => {
-  const s = await useSession<{ admin?: boolean }>(sessionConfig());
-  if (!s.data.admin) return { authorized: false as const, guests: [] };
+  if (!(await isAdmin())) return { authorized: false as const, guests: [] };
   const db = await admin();
   const { data } = await db.from("guests").select("id, full_name, email, invited_by, created_at, receipt_path").order("created_at");
   const rows = data ?? [];
@@ -170,8 +184,7 @@ export const getCopy = createServerFn({ method: "GET" }).handler(async () => {
 export const saveCopy = createServerFn({ method: "POST" })
   .inputValidator((d) => z.record(z.string(), z.string().max(600)).parse(d))
   .handler(async ({ data }) => {
-    const s = await useSession<{ admin?: boolean }>(sessionConfig());
-    if (!s.data.admin) return { ok: false };
+    if (!(await isAdmin())) return { ok: false };
     const allowed = new Set<string>(COPY_FIELDS.map((f) => f.key));
     const rows = Object.entries(data).filter(([k]) => allowed.has(k)).map(([key, value]) => ({ key, value, updated_at: new Date().toISOString() }));
     const db = await admin();
@@ -261,8 +274,7 @@ export const removeSong = createServerFn({ method: "POST" })
   });
 
 export const adminSongs = createServerFn({ method: "GET" }).handler(async () => {
-  const s = await useSession<{ admin?: boolean }>(sessionConfig());
-  if (!s.data.admin) return [];
+  if (!(await isAdmin())) return [];
   const db = await admin();
   const { data: rows } = await db.from("song_requests").select("spotify_id, title, artist, cover_url, created_at, guests(full_name)").order("created_at");
   const grouped = new Map<string, { id: string; title: string; artist: string; cover: string | null; by: string[] }>();

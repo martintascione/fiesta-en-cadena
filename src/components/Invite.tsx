@@ -89,9 +89,7 @@ export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAUL
             <Countdown />
           </section>
           <div aria-hidden className="night-cast">
-            <img src="/tricumple/p1.png" alt="" className="night-cut night-cut-a" loading="eager" />
-            <img src="/tricumple/p3.png" alt="" className="night-cut night-cut-c" loading="eager" />
-            <img src="/tricumple/p2.png" alt="" className="night-cut night-cut-b" loading="eager" />
+            <img src="/tricumple/trio.png" alt="" className="night-cut" loading="eager" />
             <div className="night-halftone" />
           </div>
         </> : <>

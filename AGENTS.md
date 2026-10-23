@@ -10,6 +10,6 @@
 <!-- LOVABLE:END -->
 
 - Keep the main-screen poster presentation opt-in on Invite; referral screens and accepted-ticket logic stay unchanged so visual redesigns do not alter guest flows.
-- Define the reusable blurred-print SVG filter once inside the main-screen presentation and reference it from scoped CSS to keep all printed edges consistent.
+- The main-screen poster (`poster-night` styles) uses a strict black / off-white / cobalt-blue palette with Poppins + Instrument Serif; keep new elements inside that palette. Editable copy lives in `site_copy` (see `src/lib/copy.ts`).
 - Extend generated database types in src/lib/database.ts for existing migration-backed tables omitted by the managed generator; keep generated files untouched and remove the extension when generation includes those tables.
 - Admin encrypted sessions use secure HttpOnly partitioned SameSite=None cookies so authentication survives inside cross-site preview frames; CSRF middleware remains enabled.
