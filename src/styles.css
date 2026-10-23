@@ -110,3 +110,5 @@
 @utility animate-marquee { animation: marquee 18s linear infinite; }
 @utility animate-pop { animation: pop .7s cubic-bezier(.2,.9,.3,1.3) both; }
 @utility animate-wobble { animation: wobble 8s ease-in-out infinite; }
+@keyframes hop { 0%,100% { transform: translate(0,0) rotate(-4deg); } 40% { transform: translate(-30px,-22px) rotate(6deg); } 60% { transform: translate(-40px,-10px) rotate(2deg); } }
+@utility animate-hop { animation: hop 3.2s ease-in-out infinite; }
