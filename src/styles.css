@@ -227,10 +227,10 @@
 
 /* los tres, recortados, en blanco y negro con trama de puntos */
 .night-cast { position: relative; z-index: 1; height: clamp(300px, 72vw, 520px); margin-top: clamp(8px, 2vw, 24px); overflow: hidden; pointer-events: none; animation: night-in 1.1s .5s ease-out both; }
-.night-cut { position: absolute; bottom: -2%; height: 92%; width: auto; filter: grayscale(1) contrast(1.35) brightness(1.05); }
-.night-cut-a { left: -2%; height: 72%; z-index: 3; }
-.night-cut-c { right: -2%; height: 74%; z-index: 3; }
-.night-cut-b { left: 50%; bottom: 10%; transform: translateX(-50%); height: 96%; z-index: 1; -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent 100%); mask-image: linear-gradient(to bottom, #000 72%, transparent 100%); }
+.night-cut { position: absolute; bottom: 0; height: 92%; width: auto; filter: grayscale(1) contrast(1.35) brightness(1.05); }
+.night-cut-a { left: 0; height: 80%; z-index: 3; }
+.night-cut-c { right: 0; height: 80%; z-index: 3; }
+.night-cut-b { left: 50%; bottom: 0; transform: translateX(-50%); height: 96%; z-index: 1; -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent 100%); mask-image: linear-gradient(to bottom, #000 72%, transparent 100%); }
 .night-halftone {
   position: absolute; inset: 0; z-index: 4;
   background-image: radial-gradient(circle, var(--night-black) 0.85px, transparent 1.25px);
