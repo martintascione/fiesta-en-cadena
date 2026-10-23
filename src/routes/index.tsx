@@ -9,7 +9,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Tricumple · Giu, Manuch y Tincho" },
-      { name: "description", content: "Sábado 7/11 · 1:30 hs · Niceto Vega 5635 · Barra libre $15.000. Confirmá tu lugar y llevate tu QR." },
+      { name: "description", content: "Sábado 7/11 · 1:30 hs · Niceto Vega 5635 · Barra libre. Confirmá tu lugar y llevate tu QR." },
       { property: "og:title", content: "Tricumple · Giu, Manuch y Tincho" },
       { property: "og:description", content: "Sáb 7/11 · 1:30 hs · Niceto Vega 5635 · Barra libre · DJ invitado. Confirmá tu lugar y llevate tu QR." },
       { property: "og:type", content: "website" },

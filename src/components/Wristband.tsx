@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { startReceiptUpload, confirmReceipt, redeemCode, type Discount } from "@/lib/guests.functions";
 
 const ALIAS = "manufer.bru";
-export const BAR_PRICE = 15000;
+export const BAR_PRICE = 17500;
 const money = (n: number) => "$" + n.toLocaleString("es-AR");
 const EXTS = ["jpg", "jpeg", "png", "webp", "heic", "pdf"] as const;
 type Ext = (typeof EXTS)[number];
