@@ -79,6 +79,11 @@ export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAUL
             <p className="night-eyebrow">{c.eyebrow}</p>
             <h1 className="night-title">Tri<svg aria-hidden className="night-spark" viewBox="0 0 100 100"><path d="M50 0 L58 40 L100 50 L58 60 L50 100 L42 60 L0 50 L42 40 Z" /></svg>{c.title.slice(3)}</h1>
             <p className="night-dir"><span className="night-rule" aria-hidden />{c.hosts}</p>
+            <p className="night-ig">
+              {[["manufferari", "Manuch"], ["giuli_mallemaci", "Giu"], ["martintascione", "Tincho"]].map(([h, n]) => (
+                <a key={h} href={`https://instagram.com/${h}`} target="_blank" rel="noreferrer" aria-label={`Instagram de ${n}`}>@{h}</a>
+              ))}
+            </p>
             <p className="night-synopsis">{c.synopsis}</p>
             {c.joke && <p className="night-joke">{c.joke}</p>}
             <dl className="night-info">
