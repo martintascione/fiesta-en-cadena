@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { adminList, adminLogin, adminLogout, adminSongs, getCopy, saveCopy } from "@/lib/guests.functions";
 import { COPY_FIELDS, type Copy } from "@/lib/copy";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/admin")({
   loader: async () => { const [list, copy, songs] = await Promise.all([adminList(), getCopy(), adminSongs()]); return { ...list, copy, songs }; },
@@ -25,7 +26,8 @@ function Admin() {
   const router = useRouter();
   const login = useServerFn(adminLogin);
   const logout = useServerFn(adminLogout);
-  const [err, setErr] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [entering, setEntering] = useState(false);
   const [filter, setFilter] = useState<"all" | "paid" | "unpaid">("all");
   const [q, setQ] = useState("");
 
@@ -36,9 +38,27 @@ function Admin() {
           className="w-full max-w-sm space-y-3 rounded-[2rem] bg-card p-6"
           onSubmit={async (e) => {
             e.preventDefault();
+            if (entering) return;
+            setErr(null);
+            setEntering(true);
             const fd = new FormData(e.currentTarget);
-            const r = await login({ data: { user: String(fd.get("user")), password: String(fd.get("password")) } });
-            if (r.ok) router.invalidate(); else setErr(true);
+            try {
+              const r = await login({ data: { user: String(fd.get("user")), password: String(fd.get("password")) } });
+              if (!r.ok) {
+                setErr("Usuario o contraseña incorrectos");
+                return;
+              }
+              const session = await adminList();
+              if (!session.authorized) {
+                setErr("El navegador no pudo mantener el acceso. Abrí el panel en una pestaña nueva y probá otra vez.");
+                return;
+              }
+              await router.invalidate();
+            } catch {
+              setErr("No se pudo entrar. Probá otra vez.");
+            } finally {
+              setEntering(false);
+            }
           }}
         >
           <h1 className="text-3xl font-extrabold">Panel 🔒</h1>
@@ -46,8 +66,8 @@ function Admin() {
             className="h-14 w-full rounded-2xl border-2 border-input bg-transparent px-4 outline-none focus:border-ring" />
           <input name="password" type="password" required autoComplete="current-password" placeholder="Contraseña"
             className="h-14 w-full rounded-2xl border-2 border-input bg-transparent px-4 outline-none focus:border-ring" />
-          {err && <p className="text-sm text-destructive">Usuario o contraseña incorrectos</p>}
-          <button className="h-14 w-full rounded-full bg-primary font-extrabold text-primary-foreground">Entrar</button>
+          {err && <p role="alert" className="text-sm text-destructive">{err}</p>}
+          <Button type="submit" disabled={entering} className="h-14 w-full rounded-full bg-primary font-extrabold text-primary-foreground">{entering ? "Entrando…" : "Entrar"}</Button>
         </form>
       </main>
     );

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { COPY_FIELDS, mergeCopy } from "@/lib/copy";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AppDatabase } from "@/lib/database";
+import { adminSessionCookie } from "@/lib/admin-session";
 
 type GuestDTO = { fullName: string; email: string; inviteCode: string; qrToken: string; hasReceipt: boolean };
 
@@ -70,7 +71,7 @@ function sessionConfig() {
     password: process.env["SESSION_SECRET"]!,
     name: "tricumple-admin",
     maxAge: 60 * 60 * 24 * 7,
-    cookie: { httpOnly: true, secure: true, sameSite: "lax" as const, path: "/" },
+    cookie: adminSessionCookie,
   };
 }
 
