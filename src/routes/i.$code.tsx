@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Invite } from "@/components/Invite";
 import { getInviter } from "@/lib/guests.functions";
 
+const SITE = (import.meta.env["VITE_SITE_URL"] as string | undefined)?.replace(/\/$/, "") ?? "";
+const OG_IMAGE = `${SITE}/og.png`;
 export const Route = createFileRoute("/i/$code")({
   loader: ({ params }) => getInviter({ data: { code: params.code } }),
   head: ({ loaderData }) => {
@@ -13,6 +15,10 @@ export const Route = createFileRoute("/i/$code")({
         { property: "og:title", content: t },
         { property: "og:description", content: "Confirmá tu lugar y llevate tu QR de entrada." },
         { property: "og:type", content: "website" },
+      { property: "og:image", content: OG_IMAGE },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { name: "twitter:image", content: OG_IMAGE },
         { name: "twitter:card", content: "summary_large_image" },
       ],
     };
