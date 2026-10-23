@@ -2,9 +2,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { QRCodeSVG } from "qrcode.react";
 import { registerGuest, findGuest } from "@/lib/guests.functions";
-import gnome from "@/assets/glyph-gnome.png";
 import boombox from "@/assets/glyph-boombox.png";
-import rabbit from "@/assets/glyph-rabbit.png";
 import { Wristband } from "@/components/Wristband";
 
 function Splat({ className }: { className?: string }) {
@@ -77,9 +75,6 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
         {/* Hero sticker */}
         <section className="relative mt-6">
           <Splat className="animate-poster-drift absolute -left-4 top-2 z-0 h-16 w-16 -rotate-12 text-sun" />
-          <img src={gnome} alt="" aria-hidden width={816} height={816}
-            style={{ ["--r" as string]: "8deg" }}
-            className="animate-poster-drift pointer-events-none absolute -right-4 -top-1 z-20 w-24 grayscale mix-blend-screen" />
           <img src={boombox} alt="" aria-hidden width={816} height={816} loading="lazy"
             style={{ ["--r" as string]: "-10deg", animationDelay: "1s" }}
             className="animate-poster-drift pointer-events-none absolute -bottom-12 -left-5 z-20 w-24 grayscale mix-blend-screen" />
@@ -103,8 +98,6 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
           </div>
         </section>
 
-        <img src={rabbit} alt="" aria-hidden width={816} height={816} loading="lazy"
-          className="animate-poster-drift pointer-events-none relative z-10 -mb-10 mt-2 w-24 self-end grayscale mix-blend-screen" />
         {/* marquee */}
         <div className="-mx-5 mt-8 overflow-hidden border-y border-paper/25 py-3 text-paper">
           <div className="animate-marquee flex w-max gap-8 whitespace-nowrap text-xs font-bold uppercase [animation-duration:40s]">
