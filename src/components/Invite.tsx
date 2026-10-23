@@ -80,11 +80,11 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
           <img src={boombox} alt="" aria-hidden width={816} height={816} loading="lazy"
             style={{ ["--r" as string]: "-10deg", animationDelay: "1s" }}
             className="animate-float pointer-events-none absolute -bottom-16 -left-10 z-20 w-28 mix-blend-screen" />
-          <div className="animate-pop sticker animate-wobble relative z-10 mx-auto bg-ink px-6 py-10 text-center">
+          <div className="animate-pop sticker animate-wobble relative z-10 mx-auto bg-ink px-4 py-10 text-center">
             <span className="absolute left-5 top-4 rounded-full border-2 border-paper px-3 py-0.5 text-xs font-bold uppercase">x3</span>
             <span className="absolute bottom-4 right-5 rounded-full border-2 border-paper px-3 py-0.5 text-xs font-bold uppercase">wow</span>
             <p className="font-hand text-2xl text-sun">estás invitad@ al</p>
-            <h1 className="font-title text-[13.5vw] leading-[0.95] tracking-[0.01em] sm:text-[5.5rem]">
+            <h1 className="font-title text-[16vw] leading-[0.9] tracking-[0.01em] sm:text-[6.5rem]">
               TRI<br />
               <span className="inline-block -rotate-3 text-lime">CUMPLE</span>
             </h1>
