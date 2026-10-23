@@ -2,6 +2,17 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { QRCodeSVG } from "qrcode.react";
 import { registerGuest, findGuest } from "@/lib/guests.functions";
+import gnome from "@/assets/glyph-gnome.png";
+import boombox from "@/assets/glyph-boombox.png";
+import rabbit from "@/assets/glyph-rabbit.png";
+
+function Splat({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 100 100" aria-hidden className={className} fill="currentColor">
+      <path d="M52 2 L56 30 L70 10 L64 34 L92 16 L70 42 L98 48 L70 54 L90 78 L62 62 L66 96 L52 66 L40 92 L40 64 L12 84 L32 58 L2 56 L30 46 L8 26 L36 36 L28 8 L44 30 Z" />
+    </svg>
+  );
+}
 
 type Guest = { fullName: string; email: string; inviteCode: string; qrToken: string };
 
@@ -52,9 +63,23 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
       </div>
 
       <div className="relative mx-auto flex max-w-md flex-col px-5 pb-16 pt-[max(2rem,env(safe-area-inset-top))]">
+        {/* top labels */}
+        <div className="flex items-center justify-between text-[10px] font-extrabold uppercase leading-tight tracking-wider">
+          <span className="rounded-lg border-2 border-paper px-2 py-1">proyecto<br />x3</span>
+          <span className="text-lg tracking-[0.4em]">✦✦✦</span>
+          <span className="text-right">una fiesta<br />que todavía<br />no empezó</span>
+        </div>
+
         {/* Hero sticker */}
-        <section className="relative mt-4">
-          <div className="animate-pop sticker animate-wobble relative mx-auto bg-ink px-6 py-10 text-center">
+        <section className="relative mt-6">
+          <Splat className="animate-spin-slow absolute -left-10 -top-10 z-0 h-40 w-40 text-tangerine" />
+          <img src={gnome} alt="" aria-hidden width={816} height={816}
+            style={{ ["--r" as string]: "8deg" }}
+            className="animate-float pointer-events-none absolute -right-6 top-24 z-20 w-28 mix-blend-screen" />
+          <img src={boombox} alt="" aria-hidden width={816} height={816} loading="lazy"
+            style={{ ["--r" as string]: "-10deg", animationDelay: "1s" }}
+            className="animate-float pointer-events-none absolute -bottom-16 -left-10 z-20 w-28 mix-blend-screen" />
+          <div className="animate-pop sticker animate-wobble relative z-10 mx-auto bg-ink px-6 py-10 text-center">
             <span className="absolute left-5 top-4 rounded-full border-2 border-paper px-3 py-0.5 text-xs font-bold uppercase">x3</span>
             <span className="absolute bottom-4 right-5 rounded-full border-2 border-paper px-3 py-0.5 text-xs font-bold uppercase">wow</span>
             <p className="font-hand text-2xl text-sun">estás invitad@ al</p>
@@ -76,6 +101,8 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
           </div>
         </section>
 
+        <img src={rabbit} alt="" aria-hidden width={816} height={816} loading="lazy"
+          className="animate-hop pointer-events-none relative z-10 -mb-10 mt-2 w-28 self-end mix-blend-screen" />
         {/* marquee */}
         <div className="-mx-5 mt-8 -rotate-2 overflow-hidden bg-sun py-2 text-ink">
           <div className="animate-marquee flex w-max gap-8 whitespace-nowrap text-xl font-extrabold uppercase">
