@@ -270,7 +270,7 @@ function Ticket({ guest }: { guest: Guest }) {
           <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-destructive text-sm font-black text-paper">!</span>
           <p className="text-sm font-extrabold uppercase leading-snug tracking-wide">
             <span className="mr-2 inline-block -translate-y-0.5 rounded-full bg-destructive px-2.5 py-1 text-[0.65rem] font-black text-paper">warning</span>
-            <span className="text-destructive">¿venís solo? sumá a 1 o 2 amigos, pasales tu link.</span>
+            <span className="text-paper">¿venís solo? sumá a 1 o 2 amigos, pasales tu link.</span>
           </p>
         </div>
         <p className="font-hand text-2xl text-muted-foreground">tu link personal</p>
