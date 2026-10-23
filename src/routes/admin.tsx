@@ -1,7 +1,9 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { adminList, adminLogin, adminLogout, adminSongs, adminCodes, createCode, updateCode, getCopy, saveCopy } from "@/lib/guests.functions";
+import { adminList, adminLogin, adminLogout, adminSongs, adminRemoveSong, adminCodes, createCode, updateCode, getCopy, saveCopy } from "@/lib/guests.functions";
+import { Trash2, Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { COPY_FIELDS, type Copy } from "@/lib/copy";
 import { Button } from "@/components/ui/button";
 
@@ -97,7 +99,7 @@ function Admin() {
         </div>
       </div>
       <CopyEditor initial={data.copy} />
-      <SongList songs={data.songs} />
+      <SongList songs={data.songs ?? []} onChange={() => router.invalidate()} />
       <Codes codes={data.codes ?? []} onChange={() => router.invalidate()} />
       <div className="mt-8 grid grid-cols-3 gap-2">
         {[["Invitados", data.guests.length, "bg-sky"], ["Barra libre", paid, "bg-lime"], ["Por referidos", referred, "bg-bubble"]].map(([l, n, c]) => (
@@ -189,8 +191,22 @@ function CopyEditor({ initial }: { initial: Copy }) {
   );
 }
 
-function SongList({ songs }: { songs: { id: string; title: string; artist: string; cover: string | null; by: string[] }[] }) {
+function SongList({ songs, onChange }: { songs: { id: string; title: string; artist: string; cover: string | null; by: string[] }[]; onChange: () => Promise<void> }) {
   const [open, setOpen] = useState(false);
+  const remove = useServerFn(adminRemoveSong);
+  const queryClient = useQueryClient();
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  async function drop(id: string, title: string) {
+    if (!confirm(`¿Eliminar “${title}” de todos los pedidos y de la página principal?`)) return;
+    setRemoving(id); setError("");
+    try {
+      const result = await remove({ data: { spotifyId: id } });
+      if (!result.ok) { setError(result.reason ?? "No se pudo eliminar"); return; }
+      await Promise.all([onChange(), queryClient.invalidateQueries({ queryKey: ["community-songs"] })]);
+    } catch { setError("No se pudo eliminar el tema. Probá de nuevo."); }
+    finally { setRemoving(null); }
+  }
   const copyIds = () => navigator.clipboard.writeText(songs.map((s) => `spotify:track:${s.id}`).join("\n"));
   return (
     <section className="mt-4 rounded-2xl bg-card p-4">
@@ -200,6 +216,7 @@ function SongList({ songs }: { songs: { id: string; title: string; artist: strin
       </button>
       {open && (
         <div className="mt-4 space-y-2">
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           {songs.length > 0 && (
             <button onClick={copyIds} className="text-sm text-muted-foreground underline">Copiar URIs para pegar en una playlist de Spotify</button>
           )}
@@ -211,6 +228,9 @@ function SongList({ songs }: { songs: { id: string; title: string; artist: strin
                 <p className="truncate text-xs text-muted-foreground">{s.by.length} {s.by.length === 1 ? "pedido" : "pedidos"} · {s.by.join(", ")}</p>
               </div>
               <a href={`https://open.spotify.com/track/${s.id}`} target="_blank" rel="noreferrer" className="rounded-full bg-lime px-3 py-1 text-xs font-extrabold text-ink">Abrir</a>
+              <Button variant="ghost" size="icon" className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive" disabled={removing !== null} onClick={() => drop(s.id, s.title)} aria-label={`Eliminar ${s.title}`} title="Eliminar tema">
+                {removing === s.id ? <Loader2 className="animate-spin" /> : <Trash2 />}
+              </Button>
             </div>
           ))}
           {songs.length === 0 && <p className="text-muted-foreground">Todavía nadie pidió temas.</p>}

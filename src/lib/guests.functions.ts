@@ -303,6 +303,15 @@ export const adminSongs = createServerFn({ method: "GET" }).handler(async () => 
   return [...grouped.values()].sort((a, b) => b.by.length - a.by.length);
 });
 
+export const adminRemoveSong = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ spotifyId: z.string().min(1).max(40) }).parse(d))
+  .handler(async ({ data }) => {
+    if (!(await isAdmin())) return { ok: false, reason: "Sesión vencida: volvé a entrar" };
+    const db = await admin();
+    const { error } = await db.from("song_requests").delete().eq("spotify_id", data.spotifyId);
+    return { ok: !error, reason: error ? "No se pudo eliminar el tema. Probá de nuevo." : null };
+  });
+
 /* ---------- Códigos de barra libre ---------- */
 const codeSchema = z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{3,24}$/, "Solo letras, números y guiones");
 

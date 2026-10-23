@@ -310,3 +310,21 @@ a[x-apple-data-detectors], .x-apple-data-detectors, .night-info a { color: inher
 .playlist-note { margin-top: 10px; font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-size: 14px; opacity: .75; }
 
 @keyframes night-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* Public requested tracks: unframed companion to the existing song picker. */
+.community-playlist { position: relative; z-index: 2; width: calc(100% - 44px); max-width: 416px; margin: 30px auto 0; padding-top: 24px; border-top: 1px solid color-mix(in srgb, var(--night-paper) 20%, transparent); color: var(--night-paper); letter-spacing: 0; }
+.community-kicker { display: flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--night-blue); }
+.community-playlist h2 { margin: 8px 0 20px; font-size: 27px; font-weight: 700; line-height: 1.15; }
+.community-playlist h2 em { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; }
+.community-tracks { list-style: none; padding: 0; margin: 0; max-height: 360px; overflow-y: auto; scrollbar-width: thin; }
+.community-tracks li { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid color-mix(in srgb, var(--night-paper) 12%, transparent); }
+.community-number { width: 18px; flex: none; font-size: 10px; opacity: .5; }
+.community-tracks img, .community-cover { width: 44px; height: 44px; flex: none; border-radius: 4px; object-fit: cover; }
+.community-cover { display: grid; place-items: center; background: color-mix(in srgb, var(--night-paper) 8%, transparent); }
+.community-track-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.community-track-copy b, .community-track-copy small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.community-track-copy b { font-size: 13px; font-weight: 600; }
+.community-track-copy small { font-size: 11px; opacity: .65; }
+.community-track-copy > span { font-size: 9px; margin-top: 2px; opacity: .5; }
+.community-tracks a { display: grid; place-items: center; width: 36px; height: 40px; flex: none; color: var(--night-paper); }
+.community-tracks a:hover { color: var(--night-blue); }
