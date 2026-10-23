@@ -100,6 +100,14 @@
   }
 }
 
+@utility title-pop {
+  -webkit-text-stroke: 2.5px var(--color-ink);
+  paint-order: stroke fill;
+  text-shadow:
+    0.055em 0.055em 0 var(--color-ink),
+    0.115em 0.115em 0 var(--color-tangerine);
+}
+
 @keyframes float { 0%,100% { transform: translateY(0) rotate(var(--r,0deg)); } 50% { transform: translateY(-14px) rotate(calc(var(--r,0deg) + 4deg)); } }
 @keyframes spin-slow { to { transform: rotate(360deg); } }
 @keyframes marquee { to { transform: translateX(-50%); } }
