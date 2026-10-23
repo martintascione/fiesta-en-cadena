@@ -182,6 +182,10 @@ function Ticket({ guest }: { guest: Guest }) {
         <p className="mt-2 text-xs opacity-70">Si lo perdés, volvé a este link y entrá con tu email.</p>
       </div>
 
+      <Wristband qrToken={guest.qrToken} initialDone={guest.hasReceipt} />
+
+
+
       <div className="animate-pop rounded-[2rem] bg-lime p-6 text-ink" style={{ animationDelay: ".25s" }}>
         <p className="font-hand text-2xl">tu link personal</p>
         <h3 className="text-3xl font-extrabold leading-tight">Podés invitar a 2 o 3 amigos 🙌</h3>
