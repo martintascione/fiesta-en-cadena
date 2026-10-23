@@ -4,6 +4,6 @@
 - [x] Test registration, sharing, recovery and referral attribution; remove test guests.
 
 # Community playlist
-- [ ] Show saved guest songs on the main invitation without exposing guest details.
-- [ ] Add secure admin deletion with confirmation and refresh the public list.
-- [ ] Test public listing and admin moderation end-to-end; remove test data.
+- [x] Show saved guest songs on the main invitation without exposing guest details.
+- [x] Add secure admin deletion with confirmation and refresh the public list.
+- [x] Test public listing and admin moderation end-to-end; remove test data.
