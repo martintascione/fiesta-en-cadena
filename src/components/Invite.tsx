@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { QRCodeSVG } from "qrcode.react";
 import { registerGuest, findGuest } from "@/lib/guests.functions";
@@ -55,8 +55,7 @@ export function Invite({ refCode, inviterName, mainPoster = false }: { refCode?:
 
   return (
     <main className={mainPoster && !guest ? "poster-night min-h-[100dvh] overflow-hidden" : "grain min-h-[100dvh] overflow-hidden"}>
-      {mainPoster && !guest && <div aria-hidden className="night-photo" />}
-      {!mainPoster && <div aria-hidden className="sand-field pointer-events-none fixed inset-0 overflow-hidden">
+            {!mainPoster && <div aria-hidden className="sand-field pointer-events-none fixed inset-0 overflow-hidden">
         {Array.from({ length: 90 }, (_, i) => (
           <span key={i} className="sand-particle" style={{
             left: `${(i * 37.13) % 100}%`,
@@ -69,25 +68,27 @@ export function Invite({ refCode, inviterName, mainPoster = false }: { refCode?:
       <div className={mainPoster && !guest ? "night-layout relative mx-auto flex flex-col" : "relative mx-auto flex max-w-md flex-col px-5 pb-16 pt-[max(2rem,env(safe-area-inset-top))]"}>
         {mainPoster ? !guest && <>
           <header className="night-top">
-            <span className="night-brand">Tricumple<sup>3</sup></span>
-            <span>Coming soon</span>
+            <span className="night-brand">the<br />tricumple<br />stories<span className="night-dot">.</span></span>
+            <span className="night-tags"><span>Sáb 7/11 · 1:30 hs</span><span>Barra libre · $15.000</span><span>DJ invitado ;)</span></span>
           </header>
           <section className="night-hero">
             <p className="night-eyebrow">Estás invitad@ al</p>
-            <h1 className="night-title" aria-label="Tricumple, Giuli, Manu y Martín">
-              <span aria-hidden>Tri</span><span aria-hidden>cumple</span>
-              <span aria-hidden className="night-stroke">
-                <svg viewBox="0 0 420 160"><path d="M18 118 C 70 60, 120 40, 180 70 S 260 140, 330 90 S 390 30, 405 48" /></svg>
-              </span>
-              <span aria-hidden className="night-scrawl">Giuli Manu Martín</span>
-            </h1>
+            <h1 className="night-title">Tri<svg aria-hidden className="night-spark" viewBox="0 0 100 100"><path d="M50 0 L58 40 L100 50 L58 60 L50 100 L42 60 L0 50 L42 40 Z" /></svg>cumple</h1>
+            <p className="night-dir"><span className="night-rule" aria-hidden />dir. Giu, Manuch &amp; Tincho</p>
+            <p className="night-synopsis">Tres cumples, una sola noche. Tres amigos juntan sus cumpleaños en una fiesta y todo se sale de control cuando la voz empieza a correr.</p>
+            <dl className="night-info">
+              <div><dt>Cuándo</dt><dd>Sáb 7/11<br />1:30 hs<br /><small>la noche del viernes</small></dd></div>
+              <div><dt>Dónde</dt><dd>Niceto Vega<br />5635<br /><small>Palermo</small></dd></div>
+              <div><dt>Barra libre</dt><dd>$15.000<br /><small>toda la noche</small></dd></div>
+            </dl>
+            <Countdown />
           </section>
-          <section className="night-block">
-            <p className="night-k">Save the date</p>
-            <p className="night-big">The real<br />night.</p>
-            <p className="night-date">Muy pronto</p>
-            <p className="night-meta">Fecha · Lugar · Hora<br />Buenos Aires</p>
-          </section>
+          <div aria-hidden className="night-cast">
+            <img src="/tricumple/p1.png" alt="" className="night-cut night-cut-a" loading="eager" />
+            <img src="/tricumple/p3.png" alt="" className="night-cut night-cut-c" loading="eager" />
+            <img src="/tricumple/p2.png" alt="" className="night-cut night-cut-b" loading="eager" />
+            <div className="night-halftone" />
+          </div>
         </> : <>
         {/* top labels */}
         <div className="flex items-center justify-between border-b border-paper/25 pb-4 text-[10px] font-bold uppercase leading-tight">
@@ -172,9 +173,38 @@ export function Invite({ refCode, inviterName, mainPoster = false }: { refCode?:
             </Button>
           </section>
         )}
-        {mainPoster && !guest && <footer className="night-foot"><span>Tricumple³</span><span>Giuli · Manu · Martín</span></footer>}
+        {mainPoster && !guest && <footer className="night-foot"><span>Tricumple · una producción de Giu, Manuch y Tincho</span><span>Sábado 7/11 · Niceto Vega 5635</span></footer>}
       </div>
     </main>
+  );
+}
+
+const PARTY_AT = new Date("2026-11-07T01:30:00-03:00").getTime();
+
+function Countdown() {
+  const [left, setLeft] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => setLeft(Math.max(0, PARTY_AT - Date.now()));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+  const parts = left === null ? null : {
+    d: Math.floor(left / 86400000),
+    h: Math.floor((left % 86400000) / 3600000),
+    m: Math.floor((left % 3600000) / 60000),
+    s: Math.floor((left % 60000) / 1000),
+  };
+  const two = (n: number) => String(n).padStart(2, "0");
+  return (
+    <div className="night-count" aria-live="polite">
+      <span className="night-count-label">{left === 0 ? "Es hoy" : "Faltan"}</span>
+      <div className="night-count-grid">
+        {(["d", "h", "m", "s"] as const).map(k => (
+          <div key={k}><b>{parts ? (k === "d" ? parts.d : two(parts[k])) : "--"}</b><small>{{ d: "días", h: "hs", m: "min", s: "seg" }[k]}</small></div>
+        ))}
+      </div>
+    </div>
   );
 }
 
