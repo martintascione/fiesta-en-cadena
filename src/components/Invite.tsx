@@ -84,9 +84,10 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
             <span className="absolute left-5 top-4 rounded-full border-2 border-paper px-3 py-0.5 text-xs font-bold uppercase">x3</span>
             <span className="absolute bottom-4 right-5 rounded-full border-2 border-paper px-3 py-0.5 text-xs font-bold uppercase">wow</span>
             <p className="font-hand text-2xl text-sun">estás invitad@ al</p>
-            <h1 className="font-title text-[16vw] leading-[0.9] tracking-[0.01em] sm:text-[6.5rem]">
-              TRI<br />
-              <span className="inline-block -rotate-3 text-lime">CUMPLE</span>
+            <h1 className="font-title text-[16vw] leading-[0.95] sm:text-[6.5rem]">
+              <span className="title-pop inline-block rotate-2 text-paper">TRI</span>
+              <br />
+              <span className="title-pop inline-block -rotate-3 text-lime">CUMPLE</span>
             </h1>
           </div>
           <div className="mt-6 flex justify-center gap-2">
