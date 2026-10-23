@@ -1,11 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Invite } from "@/components/Invite";
 import { getCopy } from "@/lib/guests.functions";
+import { communitySongsOptions } from "@/components/CommunityPlaylist";
 
 const SITE = (import.meta.env["VITE_SITE_URL"] as string | undefined)?.replace(/\/$/, "") ?? "";
 const OG_IMAGE = `${SITE}/og.png`;
 export const Route = createFileRoute("/")({
-  loader: () => getCopy(),
+  loader: async ({ context }) => {
+    const [copy] = await Promise.all([getCopy(), context.queryClient.ensureQueryData(communitySongsOptions)]);
+    return copy;
+  },
   head: () => ({
     meta: [
       { title: "Tricumple · Giu, Manuch y Tincho" },

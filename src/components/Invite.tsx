@@ -9,6 +9,7 @@ import { Link } from "@tanstack/react-router";
 import { DEFAULT_COPY, type Copy } from "@/lib/copy";
 import { Playlist } from "@/components/Playlist";
 import { invitationLink } from "@/lib/invitation-links";
+import { CommunityPlaylist } from "@/components/CommunityPlaylist";
 
 function Splat({ className }: { className?: string }) {
   return (
@@ -195,6 +196,7 @@ export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAUL
           </section>
         )}
         {mainPoster && !guest && <Playlist variant="poster" />}
+        {mainPoster && !guest && <CommunityPlaylist />}
         {mainPoster && !guest && <p className="night-admin"><Link to="/admin">admin</Link></p>}
       </div>
     </main>
