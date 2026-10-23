@@ -17,8 +17,6 @@ export const COPY_FIELDS = [
   { key: "formSub", label: "Texto del formulario", multiline: false },
   { key: "button", label: "Botón", multiline: false },
   { key: "buttonLoading", label: "Botón mientras carga", multiline: false },
-  { key: "footLeft", label: "Pie izquierda", multiline: false },
-  { key: "footRight", label: "Pie derecha", multiline: false },
 ] as const;
 
 export type CopyKey = (typeof COPY_FIELDS)[number]["key"];
@@ -43,8 +41,6 @@ export const DEFAULT_COPY: Copy = {
   formSub: "Solo tu nombre y email. Nada más.",
   button: "Yendo",
   buttonLoading: "Abrime que estoy afuera",
-  footLeft: "Tricumple · una producción de Giu, Manuch y Tincho",
-  footRight: "Sábado 7/11 · Niceto Vega 5635",
 };
 
 export function mergeCopy(rows: { key: string; value: string }[] | null | undefined): Copy {

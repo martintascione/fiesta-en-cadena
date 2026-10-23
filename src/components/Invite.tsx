@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { QRCodeSVG } from "qrcode.react";
-import { registerGuest, findGuest } from "@/lib/guests.functions";
+import { registerGuest, findGuest, type Discount } from "@/lib/guests.functions";
 import boombox from "@/assets/glyph-boombox.png";
 import { Wristband } from "@/components/Wristband";
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,12 @@ function Splat({ className }: { className?: string }) {
   );
 }
 
-type Guest = { fullName: string; email: string; inviteCode: string; qrToken: string; hasReceipt: boolean };
+type Guest = { fullName: string; email: string; inviteCode: string; qrToken: string; hasReceipt: boolean; discount: Discount };
 
 const NAMES = [
-  { name: "Giuli", accent: "border-sky bg-sky/10 text-sky" },
-  { name: "Manu", accent: "border-bubble bg-bubble/10 text-bubble" },
-  { name: "Martín", accent: "border-lime bg-lime/10 text-lime" },
+  { name: "Giu", accent: "border-sky bg-sky/10 text-sky" },
+  { name: "Manuch", accent: "border-bubble bg-bubble/10 text-bubble" },
+  { name: "Tincho", accent: "border-lime bg-lime/10 text-lime" },
 ];
 
 export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAULT_COPY }: { refCode?: string | undefined; inviterName?: string | null | undefined; mainPoster?: boolean; copy?: Copy }) {
@@ -177,7 +177,6 @@ export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAUL
           </section>
         )}
         {mainPoster && !guest && <Playlist variant="poster" />}
-        {mainPoster && !guest && <footer className="night-foot"><span>{c.footLeft}</span><span>{c.footRight}</span></footer>}
         {mainPoster && !guest && <p className="night-admin"><Link to="/admin">admin</Link></p>}
       </div>
     </main>
@@ -219,7 +218,7 @@ function Ticket({ guest }: { guest: Guest }) {
   const first = guest.fullName.split(" ")[0];
 
   async function share() {
-    const text = "¡Vení al tricumple de Giuli, Manu y Martín! Anotate acá 👉";
+    const text = "¡Vení al tricumple de Giu, Manuch y Tincho! Anotate acá 👉";
     if (navigator.share) {
       try { await navigator.share({ title: "Tricumple", text, url: link }); return; } catch { /* cancelled */ }
     }
@@ -242,7 +241,7 @@ function Ticket({ guest }: { guest: Guest }) {
         <p className="mt-2 text-xs opacity-70">Si lo perdés, volvé a este link y entrá con tu email.</p>
       </div>
 
-      <Wristband qrToken={guest.qrToken} initialDone={guest.hasReceipt} />
+      <Wristband qrToken={guest.qrToken} initialDone={guest.hasReceipt} initialDiscount={guest.discount} />
 
       <Playlist qrToken={guest.qrToken} variant="ticket" />
 

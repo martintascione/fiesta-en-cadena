@@ -6,7 +6,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AppDatabase } from "@/lib/database";
 import { adminSessionCookie } from "@/lib/admin-session";
 
-type GuestDTO = { fullName: string; email: string; inviteCode: string; qrToken: string; hasReceipt: boolean };
+export type Discount = { code: string; kind: "free" | "percent"; value: number } | null;
+type GuestDTO = { fullName: string; email: string; inviteCode: string; qrToken: string; hasReceipt: boolean; discount: Discount };
+
+async function discountFor(db: Awaited<ReturnType<typeof admin>>, codeId: string | null): Promise<Discount> {
+  if (!codeId) return null;
+  const { data: c } = await db.from("discount_codes").select("code, kind, value").eq("id", codeId).maybeSingle();
+  return c ? { code: c.code, kind: c.kind, value: c.value } : null;
+}
 
 function code(len: number) {
   const chars = "abcdefghjkmnpqrstuvwxyz23456789";
@@ -43,7 +50,7 @@ export const registerGuest = createServerFn({ method: "POST" })
     const db = await admin();
     const { data: existing } = await db.from("guests").select("*").eq("email", data.email).maybeSingle();
     if (existing)
-      return { fullName: existing.full_name, email: existing.email, inviteCode: existing.invite_code, qrToken: existing.qr_token, hasReceipt: !!existing.receipt_path };
+      return { fullName: existing.full_name, email: existing.email, inviteCode: existing.invite_code, qrToken: existing.qr_token, hasReceipt: !!existing.receipt_path, discount: await discountFor(db, existing.discount_code_id) };
     let invitedBy: string | null = null;
     if (data.ref) {
       const { data: inv } = await db.from("guests").select("id").eq("invite_code", data.ref).maybeSingle();
@@ -55,7 +62,7 @@ export const registerGuest = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error || !g) throw new Error("No pudimos registrarte, probá de nuevo");
-    return { fullName: g.full_name, email: g.email, inviteCode: g.invite_code, qrToken: g.qr_token, hasReceipt: !!g.receipt_path };
+    return { fullName: g.full_name, email: g.email, inviteCode: g.invite_code, qrToken: g.qr_token, hasReceipt: !!g.receipt_path, discount: null };
   });
 
 export const findGuest = createServerFn({ method: "POST" })
@@ -63,7 +70,7 @@ export const findGuest = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<GuestDTO | null> => {
     const db = await admin();
     const { data: g } = await db.from("guests").select("*").eq("email", data.email).maybeSingle();
-    return g ? { fullName: g.full_name, email: g.email, inviteCode: g.invite_code, qrToken: g.qr_token, hasReceipt: !!g.receipt_path } : null;
+    return g ? { fullName: g.full_name, email: g.email, inviteCode: g.invite_code, qrToken: g.qr_token, hasReceipt: !!g.receipt_path, discount: await discountFor(db, g.discount_code_id) } : null;
   });
 
 function sessionConfig() {
@@ -124,8 +131,10 @@ async function isAdmin() {
 export const adminList = createServerFn({ method: "GET" }).handler(async () => {
   if (!(await isAdmin())) return { authorized: false as const, guests: [] };
   const db = await admin();
-  const { data } = await db.from("guests").select("id, full_name, email, invited_by, created_at, receipt_path").order("created_at");
+  const { data } = await db.from("guests").select("id, full_name, email, invited_by, created_at, receipt_path, discount_code_id").order("created_at");
   const rows = data ?? [];
+  const { data: codes } = await db.from("discount_codes").select("id, code, kind, value");
+  const codeById = new Map((codes ?? []).map((c) => [c.id, c]));
   const paths = rows.map((r) => r.receipt_path).filter((x): x is string => !!x);
   const urls = new Map<string, string>();
   if (paths.length) {
@@ -143,6 +152,7 @@ export const adminList = createServerFn({ method: "GET" }).handler(async () => {
       invitedCount: rows.filter((x) => x.invited_by === r.id).length,
       createdAt: r.created_at,
       receiptUrl: r.receipt_path ? urls.get(r.receipt_path) ?? null : null,
+      discount: r.discount_code_id ? (() => { const c = codeById.get(r.discount_code_id); return c ? { code: c.code, kind: c.kind, value: c.value } : null; })() : null,
     })),
   };
 });
@@ -184,12 +194,17 @@ export const getCopy = createServerFn({ method: "GET" }).handler(async () => {
 export const saveCopy = createServerFn({ method: "POST" })
   .inputValidator((d) => z.record(z.string(), z.string().max(600)).parse(d))
   .handler(async ({ data }) => {
-    if (!(await isAdmin())) return { ok: false };
+    if (!(await isAdmin())) return { ok: false, reason: "Sesión vencida: volvé a entrar" };
     const allowed = new Set<string>(COPY_FIELDS.map((f) => f.key));
     const rows = Object.entries(data).filter(([k]) => allowed.has(k)).map(([key, value]) => ({ key, value, updated_at: new Date().toISOString() }));
-    const db = await admin();
-    const { error } = await db.from("site_copy").upsert(rows);
-    return { ok: !error };
+    try {
+      const db = await admin();
+      const { error } = await db.from("site_copy").upsert(rows, { onConflict: "key" });
+      if (error) return { ok: false, reason: `${error.message}${error.code ? ` (${error.code})` : ""}` };
+      return { ok: true, reason: null };
+    } catch (e) {
+      return { ok: false, reason: e instanceof Error ? e.message : "Error desconocido" };
+    }
   });
 
 /* ---------- Spotify: búsqueda con client credentials (sin login del invitado) ---------- */
@@ -286,3 +301,63 @@ export const adminSongs = createServerFn({ method: "GET" }).handler(async () => 
   }
   return [...grouped.values()].sort((a, b) => b.by.length - a.by.length);
 });
+
+/* ---------- Códigos de barra libre ---------- */
+const codeSchema = z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{3,24}$/, "Solo letras, números y guiones");
+
+export const redeemCode = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ qrToken: tokenSchema, code: codeSchema }).parse(d))
+  .handler(async ({ data }): Promise<{ ok: true; discount: Discount } | { ok: false; reason: string }> => {
+    const db = await admin();
+    const { data: g } = await db.from("guests").select("id, discount_code_id").eq("qr_token", data.qrToken).maybeSingle();
+    if (!g) return { ok: false, reason: "Invitado no encontrado" };
+    if (g.discount_code_id) return { ok: false, reason: "Ya usaste un código" };
+    const { data: c } = await db.from("discount_codes").select("*").eq("code", data.code).maybeSingle();
+    if (!c || !c.active) return { ok: false, reason: "Ese código no existe" };
+    if (c.uses >= c.max_uses) return { ok: false, reason: "Ese código ya se agotó" };
+    const { data: bumped } = await db.from("discount_codes").update({ uses: c.uses + 1 }).eq("id", c.id).eq("uses", c.uses).select("id").maybeSingle();
+    if (!bumped) return { ok: false, reason: "Ese código ya se agotó" };
+    await db.from("guests").update({ discount_code_id: c.id, discount_applied_at: new Date().toISOString() }).eq("id", g.id);
+    return { ok: true, discount: { code: c.code, kind: c.kind, value: c.value } };
+  });
+
+export const adminCodes = createServerFn({ method: "GET" }).handler(async () => {
+  if (!(await isAdmin())) return [];
+  const db = await admin();
+  const { data } = await db.from("discount_codes").select("*").order("created_at", { ascending: false });
+  return data ?? [];
+});
+
+export const createCode = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({
+    code: codeSchema,
+    kind: z.enum(["free", "percent"]),
+    value: z.number().int().min(1).max(100),
+    maxUses: z.number().int().min(1).max(500),
+    note: z.string().trim().max(120).optional(),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    if (!(await isAdmin())) return { ok: false, reason: "No autorizado" };
+    const db = await admin();
+    const { error } = await db.from("discount_codes").insert({ code: data.code, kind: data.kind, value: data.kind === "free" ? 100 : data.value, max_uses: data.maxUses, note: data.note || null });
+    if (error) return { ok: false, reason: error.code === "23505" ? "Ese código ya existe" : "No se pudo crear" };
+    return { ok: true, reason: null };
+  });
+
+export const updateCode = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ id: z.string().uuid(), active: z.boolean().optional(), maxUses: z.number().int().min(1).max(500).optional(), remove: z.boolean().optional() }).parse(d))
+  .handler(async ({ data }) => {
+    if (!(await isAdmin())) return { ok: false };
+    const db = await admin();
+    if (data.remove) {
+      const { data: c } = await db.from("discount_codes").select("uses").eq("id", data.id).maybeSingle();
+      if (c && c.uses > 0) return { ok: false };
+      const { error } = await db.from("discount_codes").delete().eq("id", data.id);
+      return { ok: !error };
+    }
+    const patch: { active?: boolean; max_uses?: number } = {};
+    if (data.active !== undefined) patch.active = data.active;
+    if (data.maxUses !== undefined) patch.max_uses = data.maxUses;
+    const { error } = await db.from("discount_codes").update(patch).eq("id", data.id);
+    return { ok: !error };
+  });

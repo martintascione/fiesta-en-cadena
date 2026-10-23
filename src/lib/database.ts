@@ -13,9 +13,35 @@ type SongRequest = {
   created_at: string;
 };
 
+type DiscountCode = {
+  id: string;
+  code: string;
+  kind: "free" | "percent";
+  value: number;
+  max_uses: number;
+  uses: number;
+  active: boolean;
+  note: string | null;
+  created_at: string;
+};
+
+type GuestExtra = { discount_code_id: string | null; discount_applied_at: string | null };
+type GuestsTable = Database["public"]["Tables"]["guests"];
+
 export type AppDatabase = Omit<Database, "public"> & {
   public: Omit<Database["public"], "Tables"> & {
-    Tables: Database["public"]["Tables"] & {
+    Tables: Omit<Database["public"]["Tables"], "guests"> & {
+      guests: Omit<GuestsTable, "Row" | "Insert" | "Update"> & {
+        Row: GuestsTable["Row"] & GuestExtra;
+        Insert: GuestsTable["Insert"] & Partial<GuestExtra>;
+        Update: GuestsTable["Update"] & Partial<GuestExtra>;
+      };
+      discount_codes: {
+        Row: DiscountCode;
+        Insert: Pick<DiscountCode, "code" | "kind"> & Partial<Omit<DiscountCode, "code" | "kind">>;
+        Update: Partial<DiscountCode>;
+        Relationships: [];
+      };
       site_copy: {
         Row: SiteCopy;
         Insert: Pick<SiteCopy, "key" | "value"> & Partial<Pick<SiteCopy, "updated_at">>;

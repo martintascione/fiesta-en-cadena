@@ -1,12 +1,33 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { startReceiptUpload, confirmReceipt } from "@/lib/guests.functions";
+import { startReceiptUpload, confirmReceipt, redeemCode, type Discount } from "@/lib/guests.functions";
 
 const ALIAS = "manufer.bru";
+export const BAR_PRICE = 15000;
+const money = (n: number) => "$" + n.toLocaleString("es-AR");
 const EXTS = ["jpg", "jpeg", "png", "webp", "heic", "pdf"] as const;
 type Ext = (typeof EXTS)[number];
 
-export function Wristband({ qrToken, initialDone }: { qrToken: string; initialDone: boolean }) {
+export function Wristband({ qrToken, initialDone, initialDiscount = null }: { qrToken: string; initialDone: boolean; initialDiscount?: Discount }) {
+  const redeem = useServerFn(redeemCode);
+  const [discount, setDiscount] = useState<Discount>(initialDiscount);
+  const [code, setCode] = useState("");
+  const [codeOpen, setCodeOpen] = useState(false);
+  const [codeErr, setCodeErr] = useState("");
+  const [codeBusy, setCodeBusy] = useState(false);
+  const price = discount ? (discount.kind === "free" ? 0 : Math.round(BAR_PRICE * (100 - discount.value) / 100)) : BAR_PRICE;
+  const isFree = discount?.kind === "free";
+
+  async function applyCode(e: React.FormEvent) {
+    e.preventDefault();
+    setCodeErr(""); setCodeBusy(true);
+    try {
+      const r = await redeem({ data: { qrToken, code } });
+      if (r.ok) { setDiscount(r.discount); setCodeOpen(false); } else setCodeErr(r.reason);
+    } catch { setCodeErr("No se pudo aplicar. Probá de nuevo."); }
+    finally { setCodeBusy(false); }
+  }
+
   const start = useServerFn(startReceiptUpload);
   const confirm = useServerFn(confirmReceipt);
   const [done, setDone] = useState(initialDone);
@@ -54,19 +75,40 @@ export function Wristband({ qrToken, initialDone }: { qrToken: string; initialDo
               Barra<br />libre
             </p>
             <p className="mt-3 max-w-[15rem] text-sm font-semibold leading-snug">
-              ¿Querés barra libre? Pagá la pulsera e hidratate toda la noche.
+              {isFree ? `Tu pulsera va por nuestra cuenta (código ${discount?.code}). Hidratate toda la noche.` : discount ? `Con tu código ${discount.code} pagás ${money(price)} en vez de ${money(BAR_PRICE)}.` : "¿Querés barra libre? Pagá la pulsera e hidratate toda la noche."}
             </p>
           </div>
           <div className="band-perf relative flex w-24 shrink-0 flex-col items-center justify-center border-l-2 border-dashed border-paper/70">
             <span className="text-[10px] font-extrabold uppercase tracking-widest">pulsera</span>
-            <span className="-rotate-90 whitespace-nowrap py-10 font-display text-3xl font-extrabold tracking-tight">$18.000</span>
+            <span className="-rotate-90 whitespace-nowrap py-10 font-display text-3xl font-extrabold tracking-tight">{isFree ? "GRATIS" : money(price)}</span>
             <span className="text-lg">✦</span>
           </div>
         </div>
       </div>
 
+      {isFree ? (
+        <div className="-mt-3 rounded-b-[1.75rem] border-2 border-t-0 border-paper/15 bg-card px-5 pb-5 pt-7">
+          <div className="flex items-center gap-3 rounded-2xl bg-lime px-4 py-3 text-ink">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink text-lg text-lime">✓</span>
+            <div className="leading-tight">
+              <p className="font-extrabold">Barra libre confirmada</p>
+              <p className="text-xs font-semibold">No tenés que pagar nada. Tu pulsera te espera en la puerta.</p>
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className="-mt-3 rounded-b-[1.75rem] border-2 border-t-0 border-paper/15 bg-card px-5 pb-5 pt-7">
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.25em] text-muted-foreground">1 · transferí al alias</p>
+        {!discount && (codeOpen ? (
+          <form onSubmit={applyCode} className="mb-5 flex gap-2">
+            <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="CÓDIGO" maxLength={24} autoCapitalize="characters" aria-label="Código de descuento"
+              className="h-11 min-w-0 flex-1 rounded-2xl border-2 border-input bg-transparent px-3 font-mono text-base font-bold uppercase outline-none focus:border-ring" />
+            <button disabled={codeBusy || code.length < 3} className="h-11 rounded-full bg-paper px-4 text-sm font-extrabold text-ink disabled:opacity-50">{codeBusy ? "…" : "Aplicar"}</button>
+          </form>
+        ) : (
+          <button type="button" onClick={() => setCodeOpen(true)} className="mb-5 text-xs font-semibold text-muted-foreground underline underline-offset-4">¿Tenés un código? Usalo acá</button>
+        ))}
+        {codeErr && <p className="-mt-3 mb-4 text-sm font-semibold text-destructive">{codeErr}</p>}
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.25em] text-muted-foreground">1 · transferí {money(price)} al alias</p>
         <button
           onClick={async () => {
             await navigator.clipboard.writeText(ALIAS);
@@ -102,6 +144,7 @@ export function Wristband({ qrToken, initialDone }: { qrToken: string; initialDo
         )}
         {err && <p className="mt-2 text-sm font-semibold text-destructive">{err}</p>}
       </div>
+      )}
     </div>
   );
 }
