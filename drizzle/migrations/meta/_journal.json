@@ -43,6 +43,13 @@
       "when": 1792770122108,
       "tag": "0005_create_site_copy",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792773691498,
+      "tag": "0006_short_guest_share_codes",
+      "breakpoints": true
     }
   ]
 }

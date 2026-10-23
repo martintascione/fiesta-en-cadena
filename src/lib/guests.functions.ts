@@ -5,6 +5,7 @@ import { COPY_FIELDS, mergeCopy } from "@/lib/copy";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AppDatabase } from "@/lib/database";
 import { adminSessionCookie } from "@/lib/admin-session";
+import { inviterCodeColumn } from "@/lib/invitation-links";
 
 export type Discount = { code: string; kind: "free" | "percent"; value: number } | null;
 type GuestDTO = { fullName: string; email: string; inviteCode: string; qrToken: string; hasReceipt: boolean; discount: Discount };
@@ -32,7 +33,7 @@ export const getInviter = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ code: z.string().max(40) }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
-    const { data: g } = await db.from("guests").select("full_name").eq("invite_code", data.code).maybeSingle();
+    const { data: g } = await db.from("guests").select("full_name").eq(inviterCodeColumn(data.code), data.code).maybeSingle();
     return g ? { firstName: g.full_name.split(" ")[0] } : null;
   });
 
@@ -50,10 +51,10 @@ export const registerGuest = createServerFn({ method: "POST" })
     const db = await admin();
     const { data: existing } = await db.from("guests").select("*").eq("email", data.email).maybeSingle();
     if (existing)
-      return { fullName: existing.full_name, email: existing.email, inviteCode: existing.invite_code, qrToken: existing.qr_token, hasReceipt: !!existing.receipt_path, discount: await discountFor(db, existing.discount_code_id) };
+      return { fullName: existing.full_name, email: existing.email, inviteCode: existing.share_code ?? existing.invite_code, qrToken: existing.qr_token, hasReceipt: !!existing.receipt_path, discount: await discountFor(db, existing.discount_code_id) };
     let invitedBy: string | null = null;
     if (data.ref) {
-      const { data: inv } = await db.from("guests").select("id").eq("invite_code", data.ref).maybeSingle();
+      const { data: inv } = await db.from("guests").select("id").eq(inviterCodeColumn(data.ref), data.ref).maybeSingle();
       invitedBy = inv?.id ?? null;
     }
     const { data: g, error } = await db
@@ -62,7 +63,7 @@ export const registerGuest = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error || !g) throw new Error("No pudimos registrarte, probá de nuevo");
-    return { fullName: g.full_name, email: g.email, inviteCode: g.invite_code, qrToken: g.qr_token, hasReceipt: !!g.receipt_path, discount: null };
+    return { fullName: g.full_name, email: g.email, inviteCode: g.share_code ?? g.invite_code, qrToken: g.qr_token, hasReceipt: !!g.receipt_path, discount: null };
   });
 
 export const findGuest = createServerFn({ method: "POST" })
@@ -70,7 +71,7 @@ export const findGuest = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<GuestDTO | null> => {
     const db = await admin();
     const { data: g } = await db.from("guests").select("*").eq("email", data.email).maybeSingle();
-    return g ? { fullName: g.full_name, email: g.email, inviteCode: g.invite_code, qrToken: g.qr_token, hasReceipt: !!g.receipt_path, discount: await discountFor(db, g.discount_code_id) } : null;
+    return g ? { fullName: g.full_name, email: g.email, inviteCode: g.share_code ?? g.invite_code, qrToken: g.qr_token, hasReceipt: !!g.receipt_path, discount: await discountFor(db, g.discount_code_id) } : null;
   });
 
 function sessionConfig() {
