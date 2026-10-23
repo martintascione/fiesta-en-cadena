@@ -14,9 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      discount_codes: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          kind: string
+          max_uses: number
+          note: string | null
+          uses: number
+          value: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          kind: string
+          max_uses?: number
+          note?: string | null
+          uses?: number
+          value?: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          max_uses?: number
+          note?: string | null
+          uses?: number
+          value?: number
+        }
+        Relationships: []
+      }
       guests: {
         Row: {
           created_at: string
+          discount_applied_at: string | null
+          discount_code_id: string | null
           email: string
           full_name: string
           id: string
@@ -28,6 +66,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          discount_applied_at?: string | null
+          discount_code_id?: string | null
           email: string
           full_name: string
           id?: string
@@ -39,6 +79,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          discount_applied_at?: string | null
+          discount_code_id?: string | null
           email?: string
           full_name?: string
           id?: string
@@ -50,8 +92,71 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "guests_discount_code_id_fkey"
+            columns: ["discount_code_id"]
+            isOneToOne: false
+            referencedRelation: "discount_codes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "guests_invited_by_fkey"
             columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_copy: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      song_requests: {
+        Row: {
+          artist: string
+          cover_url: string | null
+          created_at: string
+          guest_id: string
+          id: string
+          spotify_id: string
+          title: string
+        }
+        Insert: {
+          artist: string
+          cover_url?: string | null
+          created_at?: string
+          guest_id: string
+          id?: string
+          spotify_id: string
+          title: string
+        }
+        Update: {
+          artist?: string
+          cover_url?: string | null
+          created_at?: string
+          guest_id?: string
+          id?: string
+          spotify_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "song_requests_guest_id_fkey"
+            columns: ["guest_id"]
             isOneToOne: false
             referencedRelation: "guests"
             referencedColumns: ["id"]
