@@ -23,6 +23,8 @@ export type Database = {
           invite_code: string
           invited_by: string | null
           qr_token: string
+          receipt_path: string | null
+          receipt_uploaded_at: string | null
         }
         Insert: {
           created_at?: string
@@ -32,6 +34,8 @@ export type Database = {
           invite_code: string
           invited_by?: string | null
           qr_token: string
+          receipt_path?: string | null
+          receipt_uploaded_at?: string | null
         }
         Update: {
           created_at?: string
@@ -41,6 +45,8 @@ export type Database = {
           invite_code?: string
           invited_by?: string | null
           qr_token?: string
+          receipt_path?: string | null
+          receipt_uploaded_at?: string | null
         }
         Relationships: [
           {

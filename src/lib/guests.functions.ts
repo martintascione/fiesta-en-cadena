@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { useSession } from "@tanstack/react-start/server";
 import { z } from "zod";
 
-type GuestDTO = { fullName: string; email: string; inviteCode: string; qrToken: string };
+type GuestDTO = { fullName: string; email: string; inviteCode: string; qrToken: string; hasReceipt: boolean };
 
 function code(len: number) {
   const chars = "abcdefghjkmnpqrstuvwxyz23456789";
@@ -39,7 +39,7 @@ export const registerGuest = createServerFn({ method: "POST" })
     const db = await admin();
     const { data: existing } = await db.from("guests").select("*").eq("email", data.email).maybeSingle();
     if (existing)
-      return { fullName: existing.full_name, email: existing.email, inviteCode: existing.invite_code, qrToken: existing.qr_token };
+      return { fullName: existing.full_name, email: existing.email, inviteCode: existing.invite_code, qrToken: existing.qr_token, hasReceipt: !!existing.receipt_path };
     let invitedBy: string | null = null;
     if (data.ref) {
       const { data: inv } = await db.from("guests").select("id").eq("invite_code", data.ref).maybeSingle();
@@ -51,7 +51,7 @@ export const registerGuest = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error || !g) throw new Error("No pudimos registrarte, probá de nuevo");
-    return { fullName: g.full_name, email: g.email, inviteCode: g.invite_code, qrToken: g.qr_token };
+    return { fullName: g.full_name, email: g.email, inviteCode: g.invite_code, qrToken: g.qr_token, hasReceipt: !!g.receipt_path };
   });
 
 export const findGuest = createServerFn({ method: "POST" })
@@ -59,7 +59,7 @@ export const findGuest = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<GuestDTO | null> => {
     const db = await admin();
     const { data: g } = await db.from("guests").select("*").eq("email", data.email).maybeSingle();
-    return g ? { fullName: g.full_name, email: g.email, inviteCode: g.invite_code, qrToken: g.qr_token } : null;
+    return g ? { fullName: g.full_name, email: g.email, inviteCode: g.invite_code, qrToken: g.qr_token, hasReceipt: !!g.receipt_path } : null;
   });
 
 function sessionConfig() {
@@ -103,8 +103,14 @@ export const adminList = createServerFn({ method: "GET" }).handler(async () => {
   const s = await useSession<{ admin?: boolean }>(sessionConfig());
   if (!s.data.admin) return { authorized: false as const, guests: [] };
   const db = await admin();
-  const { data } = await db.from("guests").select("id, full_name, email, invited_by, created_at").order("created_at");
+  const { data } = await db.from("guests").select("id, full_name, email, invited_by, created_at, receipt_path").order("created_at");
   const rows = data ?? [];
+  const paths = rows.map((r) => r.receipt_path).filter((x): x is string => !!x);
+  const urls = new Map<string, string>();
+  if (paths.length) {
+    const { data: signed } = await db.storage.from("receipts").createSignedUrls(paths, 60 * 60);
+    signed?.forEach((x) => x.path && x.signedUrl && urls.set(x.path, x.signedUrl));
+  }
   const byId = new Map(rows.map((r) => [r.id, r.full_name]));
   return {
     authorized: true as const,
@@ -115,6 +121,31 @@ export const adminList = createServerFn({ method: "GET" }).handler(async () => {
       invitedBy: r.invited_by ? byId.get(r.invited_by) ?? "—" : null,
       invitedCount: rows.filter((x) => x.invited_by === r.id).length,
       createdAt: r.created_at,
+      receiptUrl: r.receipt_path ? urls.get(r.receipt_path) ?? null : null,
     })),
   };
 });
+
+const tokenSchema = z.string().min(10).max(40);
+
+export const startReceiptUpload = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ qrToken: tokenSchema, ext: z.enum(["jpg", "jpeg", "png", "webp", "heic", "pdf"]) }).parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { data: g } = await db.from("guests").select("id").eq("qr_token", data.qrToken).maybeSingle();
+    if (!g) throw new Error("Invitado no encontrado");
+    const path = `${g.id}/${Date.now()}.${data.ext}`;
+    const { data: up, error } = await db.storage.from("receipts").createSignedUploadUrl(path);
+    if (error || !up) throw new Error("No se pudo preparar la subida");
+    return { path, token: up.token };
+  });
+
+export const confirmReceipt = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ qrToken: tokenSchema, path: z.string().max(200) }).parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { data: g } = await db.from("guests").select("id").eq("qr_token", data.qrToken).maybeSingle();
+    if (!g || !data.path.startsWith(`${g.id}/`)) throw new Error("No autorizado");
+    await db.from("guests").update({ receipt_path: data.path, receipt_uploaded_at: new Date().toISOString() }).eq("id", g.id);
+    return { ok: true };
+  });

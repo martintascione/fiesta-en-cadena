@@ -5,6 +5,7 @@ import { registerGuest, findGuest } from "@/lib/guests.functions";
 import gnome from "@/assets/glyph-gnome.png";
 import boombox from "@/assets/glyph-boombox.png";
 import rabbit from "@/assets/glyph-rabbit.png";
+import { Wristband } from "@/components/Wristband";
 
 function Splat({ className }: { className?: string }) {
   return (
@@ -14,7 +15,7 @@ function Splat({ className }: { className?: string }) {
   );
 }
 
-type Guest = { fullName: string; email: string; inviteCode: string; qrToken: string };
+type Guest = { fullName: string; email: string; inviteCode: string; qrToken: string; hasReceipt: boolean };
 
 const NAMES = [
   { n: "Giuli", c: "bg-sky", r: "-6deg" },
@@ -181,6 +182,10 @@ function Ticket({ guest }: { guest: Guest }) {
         </p>
         <p className="mt-2 text-xs opacity-70">Si lo perdés, volvé a este link y entrá con tu email.</p>
       </div>
+
+      <Wristband qrToken={guest.qrToken} initialDone={guest.hasReceipt} />
+
+
 
       <div className="animate-pop rounded-[2rem] bg-lime p-6 text-ink" style={{ animationDelay: ".25s" }}>
         <p className="font-hand text-2xl">tu link personal</p>

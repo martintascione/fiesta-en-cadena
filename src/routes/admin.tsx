@@ -51,7 +51,10 @@ function Admin() {
   return (
     <main className="mx-auto max-w-3xl px-5 py-10">
       <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-extrabold">Invitados <span className="text-lime">{data.guests.length}</span></h1>
+        <div>
+          <h1 className="text-4xl font-extrabold">Invitados <span className="text-lime">{data.guests.length}</span></h1>
+          <p className="text-sm text-muted-foreground">Pulseras con comprobante: {data.guests.filter((g) => g.receiptUrl).length}</p>
+        </div>
         <button onClick={async () => { await logout(); router.invalidate(); }} className="text-sm text-muted-foreground underline">Salir</button>
       </div>
       <ul className="mt-6 space-y-2">
@@ -64,6 +67,14 @@ function Admin() {
               </span>
             </div>
             <p className="text-sm text-muted-foreground">{g.email} · invitó a {g.invitedCount}</p>
+            {g.receiptUrl ? (
+              <a href={g.receiptUrl} target="_blank" rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-2 rounded-full bg-lime px-3 py-1 text-xs font-extrabold uppercase text-ink">
+                ✓ Pulsera · ver comprobante
+              </a>
+            ) : (
+              <span className="mt-2 inline-block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sin pulsera</span>
+            )}
           </li>
         ))}
         {data.guests.length === 0 && <p className="text-muted-foreground">Todavía no se anotó nadie.</p>}

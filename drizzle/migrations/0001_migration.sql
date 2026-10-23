@@ -1,0 +1,1 @@
+ALTER TABLE public.guests ADD COLUMN receipt_path text, ADD COLUMN receipt_uploaded_at timestamptz;

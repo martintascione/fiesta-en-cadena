@@ -112,3 +112,8 @@
 @utility animate-wobble { animation: wobble 8s ease-in-out infinite; }
 @keyframes hop { 0%,100% { transform: translate(0,0) rotate(-4deg); } 40% { transform: translate(-30px,-22px) rotate(6deg); } 60% { transform: translate(-40px,-10px) rotate(2deg); } }
 @utility animate-hop { animation: hop 3.2s ease-in-out infinite; }
+@utility band-stripes { background-image: repeating-linear-gradient(-45deg, var(--ink) 0 2px, transparent 2px 14px); }
+@utility band-perf {
+  &::before, &::after { content: ""; position: absolute; left: -11px; width: 20px; height: 20px; border-radius: 9999px; background: var(--background); }
+  &::before { top: -10px; } &::after { bottom: -10px; }
+}
