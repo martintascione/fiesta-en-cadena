@@ -94,7 +94,6 @@
 
 @utility grain {
   position: relative;
-  isolation: isolate;
   &::after {
     content: "";
     position: fixed;
@@ -135,7 +134,7 @@
   80% { opacity: .45; }
   100% { transform: translate3d(28px,90px,0); opacity: 0; }
 }
-@utility sand-field { z-index: -1; }
+@utility sand-field { z-index: 0; }
 @utility sand-particle {
   position: absolute;
   width: 1px;
