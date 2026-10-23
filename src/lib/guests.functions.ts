@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { useSession } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { COPY_FIELDS, mergeCopy } from "@/lib/copy";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { AppDatabase } from "@/lib/database";
 
 type GuestDTO = { fullName: string; email: string; inviteCode: string; qrToken: string; hasReceipt: boolean };
 
@@ -13,7 +15,7 @@ function code(len: number) {
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  return supabaseAdmin;
+  return supabaseAdmin as SupabaseClient<AppDatabase>;
 }
 
 const emailSchema = z.string().trim().toLowerCase().email().max(255);
