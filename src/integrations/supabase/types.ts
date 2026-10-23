@@ -63,6 +63,7 @@ export type Database = {
           qr_token: string
           receipt_path: string | null
           receipt_uploaded_at: string | null
+          share_code: string | null
         }
         Insert: {
           created_at?: string
@@ -76,6 +77,7 @@ export type Database = {
           qr_token: string
           receipt_path?: string | null
           receipt_uploaded_at?: string | null
+          share_code?: string | null
         }
         Update: {
           created_at?: string
@@ -89,6 +91,7 @@ export type Database = {
           qr_token?: string
           receipt_path?: string | null
           receipt_uploaded_at?: string | null
+          share_code?: string | null
         }
         Relationships: [
           {
