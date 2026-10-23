@@ -56,9 +56,15 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
 
   return (
     <main className="grain min-h-[100dvh] overflow-hidden">
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[760px] overflow-hidden">
-        <div className="party-light left-1/4 text-bubble" />
-        <div className="party-light right-1/4 text-lime [animation-delay:-6s] [animation-direction:reverse]" />
+      <div aria-hidden className="sand-field pointer-events-none fixed inset-0 overflow-hidden">
+        {Array.from({ length: 90 }, (_, i) => (
+          <span key={i} className="sand-particle" style={{
+            left: `${(i * 37.13) % 100}%`,
+            top: `${(i * 61.79) % 100}%`,
+            animationDelay: `${-(i % 19)}s`,
+            animationDuration: `${14 + i % 13}s`,
+          }} />
+        ))}
       </div>
       <div className="relative mx-auto flex max-w-md flex-col px-5 pb-16 pt-[max(2rem,env(safe-area-inset-top))]">
         {/* top labels */}
