@@ -123,33 +123,33 @@ export function Invite({ refCode, inviterName, mainPoster = false }: { refCode?:
         {guest ? (
           <Ticket guest={guest} />
         ) : (
-          <section className={mainPoster ? "print-registration" : "animate-poster-enter mt-10 rounded-lg bg-card p-6"}>
+          <section className={`animate-poster-enter mt-10 rounded-lg bg-card p-6 ${mainPoster ? "registration-original w-full max-w-[408px] self-center font-sans text-foreground" : ""}`}>
             {inviterName && (
               <p className="mb-4 inline-block rounded-full border border-paper/40 px-3 py-1 text-sm font-semibold text-paper">
                 👋 Te invitó {inviterName}
               </p>
             )}
-            <h2 className={mainPoster ? "sr-only" : "text-2xl font-extrabold leading-tight"}>
+            <h2 className="text-2xl font-extrabold leading-tight">
               {mode === "join" ? "Confirmá y llevate tu QR" : "Recuperá tu QR"}
             </h2>
-            <p className={mainPoster ? "sr-only" : "mt-1 text-muted-foreground"}>
+            <p className="mt-1 text-muted-foreground">
               {mode === "join" ? "Solo tu nombre y email. Nada más." : "Poné el email con el que te anotaste."}
             </p>
-            <form onSubmit={onSubmit} className={mainPoster ? "space-y-3" : "mt-6 space-y-3"}>
+            <form onSubmit={onSubmit} className="mt-6 space-y-3">
               {mode === "join" && (
                 <input name="fullName" required maxLength={100} autoComplete="name" placeholder="Nombre y apellido"
-                  aria-label="Nombre y apellido" className={mainPoster ? "print-input" : "h-14 w-full rounded-2xl border-2 border-input bg-transparent px-4 text-lg outline-none focus:border-ring"} />
+                  aria-label="Nombre y apellido" className="h-14 w-full rounded-2xl border-2 border-input bg-transparent px-4 text-lg outline-none focus:border-ring" />
               )}
               <input name="email" type="email" required maxLength={255} autoComplete="email" inputMode="email" placeholder="tu@email.com"
-                aria-label="Email" className={mainPoster ? "print-input" : "h-14 w-full rounded-2xl border-2 border-input bg-transparent px-4 text-lg outline-none focus:border-ring"} />
+                aria-label="Email" className="h-14 w-full rounded-2xl border-2 border-input bg-transparent px-4 text-lg outline-none focus:border-ring" />
               {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
               <Button disabled={loading} type="submit"
-                className={mainPoster ? "print-submit" : "h-14 w-full rounded-full bg-primary text-lg font-extrabold text-primary-foreground transition active:scale-95 disabled:opacity-60"}>
-                {loading ? "Un toque…" : mode === "join" ? mainPoster ? "Confirmar asistencia" : "¡Acepto la invitación! 🎉" : "Ver mi QR"}
+                className="h-14 w-full rounded-full bg-primary text-lg font-extrabold text-primary-foreground transition active:scale-95 disabled:opacity-60">
+                {loading ? "Un toque…" : mode === "join" ? "¡Acepto la invitación! 🎉" : "Ver mi QR"}
               </Button>
             </form>
             <Button variant="link" onClick={() => { setMode(mode === "join" ? "back" : "join"); setError(""); }}
-              className={mainPoster ? "print-recovery" : "mt-4 w-full text-center text-sm font-semibold text-secondary underline underline-offset-4"}>
+              className="mt-4 w-full text-center text-sm font-semibold text-secondary underline underline-offset-4">
               {mode === "join" ? "Ya me anoté, quiero ver mi QR" : "Todavía no me anoté"}
             </Button>
           </section>
