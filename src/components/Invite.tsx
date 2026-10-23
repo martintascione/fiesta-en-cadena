@@ -56,6 +56,10 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
 
   return (
     <main className="grain min-h-[100dvh] overflow-hidden">
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[760px] overflow-hidden">
+        <div className="party-light left-1/4 text-bubble" />
+        <div className="party-light right-1/4 text-lime [animation-delay:-6s] [animation-direction:reverse]" />
+      </div>
       <div className="relative mx-auto flex max-w-md flex-col px-5 pb-16 pt-[max(2rem,env(safe-area-inset-top))]">
         {/* top labels */}
         <div className="flex items-center justify-between border-b border-paper/25 pb-4 text-[10px] font-bold uppercase leading-tight">
@@ -66,7 +70,7 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
 
         {/* Hero sticker */}
         <section className="relative mt-6">
-          <Splat className="absolute -left-4 top-2 z-0 h-16 w-16 -rotate-12 text-poster-blue" />
+          <Splat className="animate-poster-drift absolute -left-4 top-2 z-0 h-16 w-16 -rotate-12 text-sun" />
           <img src={gnome} alt="" aria-hidden width={816} height={816}
             style={{ ["--r" as string]: "8deg" }}
             className="animate-poster-drift pointer-events-none absolute -right-4 -top-1 z-20 w-24 grayscale mix-blend-screen" />
@@ -74,11 +78,11 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
             style={{ ["--r" as string]: "-10deg", animationDelay: "1s" }}
             className="animate-poster-drift pointer-events-none absolute -bottom-12 -left-5 z-20 w-24 grayscale mix-blend-screen" />
           <div className="animate-poster-enter relative z-10 mx-auto py-14 text-center">
-            <span className="absolute bottom-2 right-0 -rotate-6 bg-poster-violet px-2 py-0.5 font-title text-base uppercase text-ink">wow</span>
-            <p className="mb-4 inline-block -rotate-3 font-title text-lg uppercase text-poster-blue">estás invitad@ al</p>
-            <h1 aria-label="Tricumple" className="poster-title font-title text-poster-blue">
-              <span aria-hidden className="poster-word"><span>T</span><span>R</span><span className="text-poster-violet">I</span></span>
-              <span aria-hidden className="poster-word"><span>C</span><span>U</span><span>M</span><span>P</span><span className="text-poster-violet">L</span><span>E</span></span>
+            <span className="absolute bottom-2 right-0 -rotate-6 bg-bubble px-2 py-0.5 font-title text-base uppercase text-ink">wow</span>
+            <p className="mb-4 inline-block -rotate-3 font-title text-lg uppercase text-paper">estás invitad@ al</p>
+            <h1 aria-label="Tricumple" className="poster-title font-title text-paper">
+              <span aria-hidden className="poster-word"><span>T</span><span>R</span><span className="text-bubble">I</span></span>
+              <span aria-hidden className="poster-word"><span>C</span><span>U</span><span>M</span><span>P</span><span className="text-lime">L</span><span>E</span></span>
             </h1>
           </div>
           <div className="mt-4 flex justify-center gap-2">
