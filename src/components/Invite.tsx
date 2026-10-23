@@ -17,7 +17,11 @@ function Splat({ className }: { className?: string }) {
 
 type Guest = { fullName: string; email: string; inviteCode: string; qrToken: string; hasReceipt: boolean };
 
-const NAMES = ["Giuli", "Manu", "Martín"];
+const NAMES = [
+  { name: "Giuli", accent: "border-sky bg-sky/10 text-sky" },
+  { name: "Manu", accent: "border-bubble bg-bubble/10 text-bubble" },
+  { name: "Martín", accent: "border-lime bg-lime/10 text-lime" },
+];
 
 export function Invite({ refCode, inviterName }: { refCode?: string | undefined; inviterName?: string | null | undefined }) {
   const register = useServerFn(registerGuest);
@@ -56,7 +60,7 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
         {/* top labels */}
         <div className="flex items-center justify-between border-b border-paper/25 pb-4 text-[10px] font-bold uppercase leading-tight">
           <span>proyecto<br />x3</span>
-          <span className="text-lg">✦✦✦</span>
+          <span className="flex text-lg" aria-hidden><span className="text-sky">✦</span><span className="text-bubble">✦</span><span className="text-lime">✦</span></span>
           <span className="text-right">una fiesta<br />que todavía<br />no empezó</span>
         </div>
 
@@ -70,19 +74,19 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
             style={{ ["--r" as string]: "-10deg", animationDelay: "1s" }}
             className="animate-poster-drift pointer-events-none absolute -bottom-12 -left-5 z-20 w-24 grayscale mix-blend-screen" />
           <div className="animate-poster-enter relative z-10 mx-auto py-14 text-center">
-            <span className="absolute bottom-2 right-0 text-xs font-bold uppercase">wow</span>
+            <span className="absolute bottom-2 right-0 -rotate-6 bg-bubble px-2 py-0.5 text-xs font-bold uppercase text-ink">wow</span>
             <p className="mb-4 text-xs font-bold uppercase">estás invitad@ al</p>
             <h1 className="poster-title font-title text-paper">
-              <span className="inline-block">TRI</span>
+              <span className="relative inline-block">TRI<span aria-hidden className="absolute -bottom-1 -right-3 h-1 w-10 -rotate-6 bg-sky" /></span>
               <br />
               <span className="inline-block">CUMPLE</span>
             </h1>
           </div>
           <div className="mt-4 flex justify-center gap-2">
-            {NAMES.map((name) => (
+            {NAMES.map(({ name, accent }) => (
               <span
                 key={name}
-                className="rounded-full border border-paper/60 px-4 py-1.5 text-sm font-semibold text-paper"
+                className={`rounded-full border px-4 py-1.5 text-sm font-semibold ${accent}`}
               >
                 {name}
               </span>
@@ -97,7 +101,7 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
           <div className="animate-marquee flex w-max gap-8 whitespace-nowrap text-xs font-bold uppercase [animation-duration:40s]">
             {Array.from({ length: 2 }).flatMap((_, k) =>
               ["3 cumples", "★", "1 fiesta", "★", "traé amigos", "★", "fecha y lugar muy pronto", "★"].map((t, i) => (
-                <span key={`${k}-${i}`}>{t}</span>
+                <span key={`${k}-${i}`} className={t === "★" ? "text-sun" : undefined}>{t}</span>
               )),
             )}
           </div>
