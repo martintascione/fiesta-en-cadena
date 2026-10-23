@@ -97,7 +97,7 @@ function Admin() {
       </div>
       <CopyEditor initial={data.copy} />
       <SongList songs={data.songs} />
-      <Codes codes={data.codes} onChange={() => router.invalidate()} />
+      <Codes codes={data.codes ?? []} onChange={() => router.invalidate()} />
       <div className="mt-8 grid grid-cols-3 gap-2">
         {[["Invitados", data.guests.length, "bg-sky"], ["Barra libre", paid, "bg-lime"], ["Por referidos", referred, "bg-bubble"]].map(([l, n, c]) => (
           <div key={String(l)} className={`rounded-2xl p-4 text-ink ${c}`}>
