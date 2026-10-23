@@ -75,7 +75,7 @@ export function Invite({ refCode, inviterName }: { refCode?: string | undefined;
           <Splat className="animate-spin-slow absolute -left-10 -top-10 z-0 h-40 w-40 text-tangerine" />
           <img src={gnome} alt="" aria-hidden width={816} height={816}
             style={{ ["--r" as string]: "8deg" }}
-            className="animate-float pointer-events-none absolute -right-8 -top-14 z-20 w-32 mix-blend-screen" />
+            className="animate-float pointer-events-none absolute -right-6 top-24 z-20 w-28 mix-blend-screen" />
           <img src={boombox} alt="" aria-hidden width={816} height={816} loading="lazy"
             style={{ ["--r" as string]: "-10deg", animationDelay: "1s" }}
             className="animate-float pointer-events-none absolute -bottom-16 -left-10 z-20 w-28 mix-blend-screen" />
