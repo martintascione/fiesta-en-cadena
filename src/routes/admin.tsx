@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { adminList, adminLogin, adminLogout, adminSongs, adminCodes, createCode, updateCode, getCopy, saveCopy } from "@/lib/guests.functions";
@@ -89,7 +89,8 @@ function Admin() {
     <main className="mx-auto max-w-3xl px-5 py-10">
       <div className="flex items-center justify-between">
         <h1 className="text-4xl font-extrabold">Panel</h1>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <Link to="/" className="text-sm font-semibold text-muted-foreground underline">Volver a la invitación</Link>
           <button onClick={exportCsv} className="text-sm text-muted-foreground underline">Exportar CSV</button>
           <button onClick={() => router.invalidate()} className="text-sm text-muted-foreground underline">Actualizar</button>
           <button onClick={async () => { await logout(); router.invalidate(); }} className="text-sm text-muted-foreground underline">Salir</button>
