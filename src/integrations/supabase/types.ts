@@ -14,7 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      guests: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          invite_code: string
+          invited_by: string | null
+          qr_token: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          invite_code: string
+          invited_by?: string | null
+          qr_token: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          invite_code?: string
+          invited_by?: string | null
+          qr_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guests_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
