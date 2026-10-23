@@ -104,7 +104,7 @@ export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAUL
           </section>
           <div className="night-cast">
             <img src="/tricumple/trio.png" alt="" className="night-cut" loading="eager" />
-            {[["manufferari", "Manuch", "a"], ["giuli_mallemaci", "Giu", "b"], ["martintascione", "Tincho", "c"]].map(([h, n, k]) => (
+            {[["manufferrari", "Manuch", "a"], ["giuli_mallemaci", "Giu", "b"], ["martintascione", "Tincho", "c"]].map(([h, n, k]) => (
               <a key={h} href={`https://instagram.com/${h}`} target="_blank" rel="noreferrer" aria-label={`Instagram de ${n}`} className={`night-tagig night-tagig-${k}`}>@{h}</a>
             ))}
             <div className="night-halftone" />
