@@ -88,7 +88,6 @@ export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAUL
       <div className={mainPoster && !guest ? "night-layout relative mx-auto flex flex-col" : "relative mx-auto flex max-w-md flex-col px-5 pb-16 pt-[max(2rem,env(safe-area-inset-top))]"}>
         {mainPoster ? !guest && <>
           <header className="night-top">
-            <span className="night-brand">the<br />tricumple<br />stories<span className="night-dot">.</span></span>
             <span className="night-tags">{[c.tag1, c.tag2, c.tag3].filter(Boolean).map((t) => <span key={t}>{t}</span>)}</span>
           </header>
           <section className="night-hero">
