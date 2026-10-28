@@ -411,13 +411,13 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
     setLinking(ext.id);
   }
   const barCell = (g: GuestRow) => g.receiptUrl ? (
-    <a href={g.receiptUrl} target="_blank" rel="noreferrer" title="Pagó: ver comprobante" className="inline-flex h-8 items-center gap-1 rounded-full bg-lime px-3 text-[11px] font-extrabold uppercase text-ink">✓ Pagó <span className="font-normal normal-case opacity-70">ver</span></a>
+    <a href={g.receiptUrl} target="_blank" rel="noreferrer" title="Pagada: ver comprobante" className="inline-flex h-8 items-center gap-1 rounded-full bg-lime px-3 text-[11px] font-extrabold uppercase text-ink">✓ Pagada <span className="font-normal normal-case opacity-70">ver</span></a>
   ) : g.discount?.kind === "free" ? (
     <span title={`Código ${g.discount.code}`} className="inline-flex h-8 items-center rounded-full bg-lime px-3 text-[11px] font-extrabold uppercase text-ink">✓ Gratis</span>
   ) : (
-    <button type="button" onClick={() => patch(g.id, { manualBar: !g.manualBar })} title={g.manualBar ? "Marcado como pagado a mano. Clic para desmarcar" : "Clic para marcar como pagado (efectivo, etc.)"}
-      className={`inline-flex h-8 items-center gap-1 rounded-full px-3 text-[11px] font-extrabold uppercase transition active:scale-95 ${g.manualBar ? "bg-lime text-ink" : "border-2 border-dashed border-paper/40 text-paper/60 hover:border-sun hover:text-sun"}`}>
-      {g.manualBar ? "✓ Pagó" : "○ Falta"}
+    <button type="button" onClick={() => patch(g.id, { manualBar: !g.manualBar })} title={g.manualBar ? "Marcada como pagada a mano. Clic para desmarcar" : "Clic para marcar como pagada (efectivo, etc.)"}
+      className={`inline-flex h-8 items-center gap-1 rounded-full px-3 text-[11px] font-extrabold uppercase transition active:scale-95 ${g.manualBar ? "bg-lime text-ink" : "bg-destructive/15 text-destructive hover:bg-destructive hover:text-paper"}`}>
+      {g.manualBar ? "✓ Pagada" : "Falta pagar"}
     </button>
   );
   const hostsCell = (g: GuestRow) => {
@@ -429,6 +429,41 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
           return <button key={h.key} type="button" onClick={() => patch(g.id, { hosts: toggle(g.hostsResolved, h.key) })}
             className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${on ? `${hostColor[h.key]} text-ink` : "border border-paper/20 text-muted-foreground"} ${on && inherited ? "opacity-60" : ""}`}>{h.label[0]}</button>;
         })}
+      </span>
+    );
+  };
+  const [namesFor, setNamesFor] = useState<string | null>(null);
+  const extrasCell = (g: GuestRow) => {
+    const missing = Math.max(0, g.extras - g.extraNames.length);
+    if (namesFor === g.id) {
+      const slots = Math.max(g.extras, g.extraNames.length, 1);
+      return (
+        <form className="flex flex-col gap-1 py-1" onSubmit={(e) => {
+          e.preventDefault();
+          const fd = new FormData(e.currentTarget);
+          const names = Array.from({ length: slots }, (_, k) => String(fd.get(`n${k}`) ?? "").trim()).filter(Boolean);
+          patch(g.id, { extras: Math.max(g.extras, names.length), extraNames: names }); setNamesFor(null);
+        }}>
+          {Array.from({ length: slots }, (_, k) => (
+            <input key={k} name={`n${k}`} defaultValue={g.extraNames[k] ?? ""} placeholder={`Acompañante ${k + 1}`} autoFocus={k === 0}
+              className="h-8 w-full rounded-md border border-input bg-ink px-2 text-xs outline-none focus:border-sun" />
+          ))}
+          <span className="flex gap-2">
+            <button className="h-7 rounded-full bg-sun px-3 text-[11px] font-extrabold text-ink">Guardar</button>
+            <button type="button" onClick={() => setNamesFor(null)} className="text-[11px] text-muted-foreground">Cancelar</button>
+          </span>
+        </form>
+      );
+    }
+    return (
+      <span className="flex items-center gap-1">
+        <Cell value={g.extraNames.length ? g.extraNames.join(", ") : g.extras ? `+${g.extras}` : ""} placeholder="+2" onSave={(v) => patch(g.id, parseExtras(v))} />
+        {g.extras > 0 && (
+          <button type="button" onClick={() => setNamesFor(g.id)} title={missing ? `Faltan ${missing} nombre${missing > 1 ? "s" : ""}` : "Editar nombres"}
+            className={`h-7 shrink-0 rounded-full px-2 text-[10px] font-bold ${missing ? "bg-sun/20 text-sun hover:bg-sun hover:text-ink" : "border border-paper/20 text-muted-foreground hover:text-paper"}`}>
+            {missing ? `+${missing} ?` : "✎"}
+          </button>
+        )}
       </span>
     );
   };
@@ -470,7 +505,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
               <th className="px-2 py-2">Email</th>
               <th className="w-28 px-2 py-2">Invitado de</th>
               <th className="px-2 py-2">Vino por</th>
-              <th className="w-40 px-2 py-2">Acompañantes</th>
+              <th className="w-48 px-2 py-2">Acompañantes</th>
               <th className="w-28 px-2 py-2 text-center">Barra libre</th>
               <th className="px-2 py-2">Notas</th>
               <th className="w-24 px-2 py-2">Link</th>
@@ -487,7 +522,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
                   <td className="px-1 py-1"><Cell value={g.placeholderEmail ? "" : g.email} type="email" placeholder="sin email" onSave={(v) => patch(g.id, { email: v })} /></td>
                   <td className="px-1 py-1">{hostsCell(g)}</td>
                   <td className="px-2 py-1 text-xs text-muted-foreground">{g.invitedBy ? <span className="rounded-full bg-bubble/20 px-2 py-0.5 font-semibold text-bubble">link de {g.invitedBy}</span> : g.referrer ? <span>vía {g.referrer}</span> : <span className="opacity-60">link general</span>}{g.invitedCount ? <span className="ml-1">· invitó a {g.invitedCount}</span> : null}{g.discount ? <span className="ml-1">· {g.discount.code}</span> : null}</td>
-                  <td className="px-1 py-1"><Cell value={g.extraNames.length ? g.extraNames.join(", ") : g.extras ? `+${g.extras}` : ""} placeholder="+2 o nombres" onSave={(v) => patch(g.id, parseExtras(v))} /></td>
+                  <td className="px-1 py-1">{extrasCell(g)}</td>
                   <td className="px-2 py-1 text-center">{barCell(g)}</td>
                   <td className="px-1 py-1"><Cell value={g.notes} placeholder="…" onSave={(v) => patch(g.id, { notes: v })} /></td>
                   <td className="px-2 py-1"><button onClick={async () => { await navigator.clipboard.writeText(link(g)); setCopied(g.id); setTimeout(() => setCopied(""), 1500); }} className="rounded-full border border-paper/30 px-2 py-0.5 text-[10px] font-bold uppercase">{copied === g.id ? "copiado" : g.shareCode}</button></td>
@@ -529,7 +564,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
               <th className="px-2 py-2">Nombre</th>
               <th className="w-28 px-2 py-2">Invitado de</th>
               <th className="w-40 px-2 py-2">Lo invita</th>
-              <th className="w-40 px-2 py-2">Acompañantes</th>
+              <th className="w-48 px-2 py-2">Acompañantes</th>
               <th className="w-28 px-2 py-2 text-center">Barra libre</th>
               <th className="px-2 py-2">Notas</th>
               <th className="w-44 px-2 py-2 text-right">Registro</th>
@@ -547,7 +582,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
                   <td className="px-1 py-1"><Cell value={g.fullName} onSave={(v) => patch(g.id, { fullName: v })} className="font-semibold" /></td>
                   <td className="px-1 py-1">{hostsCell(g)}</td>
                   <td className="px-1 py-1"><Cell value={g.referrer} placeholder="quién lo invita" onSave={(v) => patch(g.id, { referrer: v })} /></td>
-                  <td className="px-1 py-1"><Cell value={g.extraNames.length ? g.extraNames.join(", ") : g.extras ? `+${g.extras}` : ""} placeholder="+2 o nombres" onSave={(v) => patch(g.id, parseExtras(v))} /></td>
+                  <td className="px-1 py-1">{extrasCell(g)}</td>
                   <td className="px-2 py-1 text-center">{barCell(g)}</td>
                   <td className="px-1 py-1"><Cell value={g.notes} placeholder="…" onSave={(v) => patch(g.id, { notes: v })} /></td>
                   <td className="px-2 py-1 text-right">
@@ -555,7 +590,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
                       <span className="flex items-center justify-end gap-1">
                         <select defaultValue="" onChange={(e) => { if (e.target.value === "__confirm") patch(g.id, { confirmed: true }); else if (e.target.value) linkTo(g, e.target.value); }}
                           className="h-8 max-w-[11rem] rounded-full border border-input bg-card px-2 text-xs">
-                          <option value="" disabled>Vincular con…</option>
+                          <option value="" disabled>¿Con quién de arriba?</option>
                           {registered.map((r) => <option key={r.id} value={r.id}>{r.fullName}</option>)}
                           <option value="__confirm">Marcar registrado sin vincular</option>
                         </select>
@@ -564,7 +599,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
                     ) : (
                       <button onClick={() => markRegistered(g)} title={suggestion ? `Coincide con ${suggestion.fullName}: se unen en una sola fila` : "Elegí con qué registro de la web corresponde"}
                         className={`inline-flex h-8 items-center gap-1 rounded-full px-3 text-[11px] font-extrabold uppercase transition active:scale-95 ${suggestion ? "bg-sun text-ink" : "border border-paper/30 text-paper/80 hover:border-sun hover:text-sun"}`}>
-                        {suggestion ? "↑ Ya se registró" : "Está registrado"}
+                        {suggestion ? "↑ Está registrado arriba" : "Está registrado arriba"}
                       </button>
                     )}
                   </td>
