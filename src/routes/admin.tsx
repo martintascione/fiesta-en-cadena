@@ -327,7 +327,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
   const comboLabel = (hs: Host[]) => hs.length === 0 ? "Sin asignar" : hs.length === 3 ? "En común (los 3)" : hs.map(hostLabel).join(" + ");
   const comboRank = (hs: Host[]) => hs.length === 3 ? 0 : hs.length === 1 ? 1 + HOSTS.findIndex((x) => x.key === hs[0]) : hs.length === 2 ? 10 : 99;
   const sortedHosts = (hs: Host[]) => [...hs].sort((x, y) => HOSTS.findIndex((h) => h.key === x) - HOSTS.findIndex((h) => h.key === y));
-  const ordered = [...guests].map((g) => ({ ...g, hostsResolved: sortedHosts(g.hostsResolved) })).sort((a, b) =>
+  const ordered = [...guests].map((g) => ({ ...g, hostsResolved: sortedHosts(g.hostsResolved ?? []), hosts: g.hosts ?? [], extraNames: g.extraNames ?? [] })).sort((a, b) =>
     comboRank(a.hostsResolved) - comboRank(b.hostsResolved) || comboLabel(a.hostsResolved).localeCompare(comboLabel(b.hostsResolved)) || a.fullName.localeCompare(b.fullName, "es"),
   ).filter((g) => group === "all" ? true : group === "none" ? g.hostsResolved.length === 0 : g.hostsResolved.includes(group));
   const counts = HOSTS.map((h) => ({ ...h, n: guests.filter((g) => g.hostsResolved.includes(h.key)).length }));
@@ -429,7 +429,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
               const prev = ordered[i - 1];
               const label = comboLabel(g.hostsResolved);
               const newGroup = group === "all" && (!prev || comboLabel(prev.hostsResolved) !== label);
-              const inherited = !(g.hosts ?? []).length && g.hostsResolved.length > 0;
+              const inherited = !g.hosts.length && g.hostsResolved.length > 0;
               return (<Fragment key={g.id}>
                 {newGroup && (
                   <tr className="border-t border-paper/10">
