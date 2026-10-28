@@ -429,7 +429,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
               const prev = ordered[i - 1];
               const label = comboLabel(g.hostsResolved);
               const newGroup = group === "all" && (!prev || comboLabel(prev.hostsResolved) !== label);
-              const inherited = !g.hosts.length && g.hostsResolved.length > 0;
+              const inherited = !(g.hosts ?? []).length && g.hostsResolved.length > 0;
               return (<Fragment key={g.id}>
                 {newGroup && (
                   <tr className="border-t border-paper/10">
@@ -451,7 +451,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
                     </span>
                   </td>
                   <td className="px-1 py-1">
-                    <Cell value={g.extraNames.length ? g.extraNames.join(", ") : g.extras ? `+${g.extras}` : ""} placeholder="+2 o nombres" onSave={(v) => patch(g.id, parseExtras(v))} />
+                    <Cell value={g.extraNames?.length ? g.extraNames.join(", ") : g.extras ? `+${g.extras}` : ""} placeholder="+2 o nombres" onSave={(v) => patch(g.id, parseExtras(v))} />
                   </td>
                   <td className="px-2 py-1 text-center">
                     {g.receiptUrl ? (
