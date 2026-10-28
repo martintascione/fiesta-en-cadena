@@ -33,6 +33,7 @@ function Admin() {
   const [filter, setFilter] = useState<"all" | "paid" | "unpaid">("all");
   const [status, setStatus] = useState<"all" | "confirmed" | "pending">("all");
   const [tab, setTab] = useState<"guests" | "codes" | "songs" | "copy">("guests");
+  const [copiedAll, setCopiedAll] = useState(false);
   const [q, setQ] = useState("");
 
   if (!data.authorized) {
@@ -110,6 +111,11 @@ function Admin() {
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <Link to="/" className="rounded-full border border-paper/20 px-3 py-1.5 font-semibold text-paper/80 hover:border-paper/50">Ver invitación</Link>
           <button onClick={exportCsv} className="rounded-full border border-paper/20 px-3 py-1.5 font-semibold text-paper/80 hover:border-paper/50">Exportar CSV</button>
+          <button onClick={async () => {
+            const text = data.guests.map((g) => `${g.fullName}, ${g.placeholderEmail ? "" : g.email}, ${g.confirmed ? "confirmado" : "sin confirmar"}`).join("\n");
+            await navigator.clipboard.writeText(text);
+            setCopiedAll(true); setTimeout(() => setCopiedAll(false), 1800);
+          }} className="rounded-full border border-paper/20 px-3 py-1.5 font-semibold text-paper/80 hover:border-paper/50">{copiedAll ? "¡Copiado!" : "Copiar lista"}</button>
           <button onClick={() => router.invalidate()} className="rounded-full border border-paper/20 px-3 py-1.5 font-semibold text-paper/80 hover:border-paper/50">Actualizar</button>
           <button onClick={async () => { await logout(); router.invalidate(); }} className="rounded-full px-3 py-1.5 font-semibold text-muted-foreground hover:text-destructive">Salir</button>
         </div>
