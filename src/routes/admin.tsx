@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { adminList, adminLogin, adminLogout, adminSongs, adminRemoveSong, adminCodes, createCode, updateCode, getCopy, saveCopy, adminAddGuests, adminUpdateGuest, adminDeleteGuest, HOSTS, type Host } from "@/lib/guests.functions";
 import { Trash2, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -31,6 +31,8 @@ function Admin() {
   const [err, setErr] = useState("");
   const [entering, setEntering] = useState(false);
   const [filter, setFilter] = useState<"all" | "paid" | "unpaid">("all");
+  const [status, setStatus] = useState<"all" | "confirmed" | "pending">("all");
+  const [tab, setTab] = useState<"guests" | "codes" | "songs" | "copy">("guests");
   const [q, setQ] = useState("");
 
   if (!data.authorized) {
@@ -75,11 +77,13 @@ function Admin() {
     const hasBar = !!g.receiptUrl || g.discount?.kind === "free" || g.manualBar;
     if (filter === "paid" && !hasBar) return false;
     if (filter === "unpaid" && hasBar) return false;
+    if (status === "confirmed" && !g.confirmed) return false;
+    if (status === "pending" && g.confirmed) return false;
     const t = q.trim().toLowerCase();
     return !t || g.fullName.toLowerCase().includes(t) || g.email.toLowerCase().includes(t);
   });
   const exportCsv = () => {
-    const rows = [["Nombre", "Email", "Invitado de", "Acompañantes", "Invitado por", "Invitó a", "Pulsera", "Código", "Notas", "Link", "Registrado"], ...data.guests.map((g) => [g.fullName, g.placeholderEmail ? "" : g.email, g.hostsResolved.map((h) => HOSTS.find((x) => x.key === h)?.label).join(" + "), String(g.extras ?? 0), g.invitedBy ?? "", String(g.invitedCount), g.receiptUrl ? "comprobante" : g.discount?.kind === "free" ? "código" : g.manualBar ? "manual" : "no", g.discount?.code ?? "", g.notes, `${window.location.origin}/i/${g.shareCode}`, new Date(g.createdAt).toLocaleString("es-AR")])];
+    const rows = [["Nombre", "Confirmado", "Email", "Invitado de", "Acompañantes", "Nombres acompañantes", "Invitado por", "Invitó a", "Pulsera", "Código", "Notas", "Link", "Registrado"], ...data.guests.map((g) => [g.fullName, g.confirmed ? "sí" : "no", g.placeholderEmail ? "" : g.email, g.hostsResolved.map((h) => HOSTS.find((x) => x.key === h)?.label).join(" + "), String(g.extras ?? 0), g.extraNames.join(", "), g.invitedBy ?? "", String(g.invitedCount), g.receiptUrl ? "comprobante" : g.discount?.kind === "free" ? "código" : g.manualBar ? "manual" : "no", g.discount?.code ?? "", g.notes, `${window.location.origin}/i/${g.shareCode}`, new Date(g.createdAt).toLocaleString("es-AR")])];
     const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
@@ -87,37 +91,66 @@ function Admin() {
     a.click();
   };
 
+  const extras = data.guests.reduce((a, g) => a + (g.extras ?? 0), 0);
+  const conf = data.guests.filter((g) => g.confirmed).length;
+  const stats: [string, string | number, string, string][] = [
+    ["Invitados", data.guests.length, extras ? `+${extras} acompañantes` : "sin acompañantes", "text-sky"],
+    ["Confirmados", conf, `${data.guests.length ? Math.round((conf / data.guests.length) * 100) : 0}% del total`, "text-paper"],
+    ["Sin confirmar", data.guests.length - conf, "cargados a mano", "text-sun"],
+    ["Barra libre", paid, `$${(paid * 17500).toLocaleString("es-AR")} recaudados`, "text-lime"],
+  ];
+
   return (
-    <main className="mx-auto max-w-3xl px-5 py-10">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-4xl font-extrabold">Panel</h1>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-          <Link to="/" className="font-semibold text-muted-foreground underline">Volver a la invitación</Link>
-          <button onClick={exportCsv} className="text-muted-foreground underline">Exportar CSV</button>
-          <button onClick={() => router.invalidate()} className="text-muted-foreground underline">Actualizar</button>
-          <button onClick={async () => { await logout(); router.invalidate(); }} className="text-muted-foreground underline">Salir</button>
+    <main className="mx-auto max-w-6xl px-5 py-8">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[.2em] text-muted-foreground">Tricumple · Panel</p>
+          <h1 className="mt-1 text-4xl font-extrabold tracking-tight">Invitados</h1>
         </div>
-      </div>
-      <CopyEditor initial={data.copy} />
-      <SongList songs={data.songs ?? []} onChange={() => router.invalidate()} />
-      <Codes codes={data.codes ?? []} onChange={() => router.invalidate()} />
-      <div className="mt-8 grid grid-cols-3 gap-2">
-        {[["Invitados", `${data.guests.length}${data.guests.reduce((a, g) => a + (g.extras ?? 0), 0) ? ` +${data.guests.reduce((a, g) => a + (g.extras ?? 0), 0)}` : ""}`, "bg-sky"], ["Barra libre", paid, "bg-lime"], ["Por referidos", referred, "bg-bubble"]].map(([l, n, c]) => (
-          <div key={String(l)} className={`rounded-2xl p-4 text-ink ${c}`}>
-            <p className="text-3xl font-extrabold leading-none">{n}</p>
-            <p className="mt-1 text-xs font-bold uppercase tracking-wider">{l}</p>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <Link to="/" className="rounded-full border border-paper/20 px-3 py-1.5 font-semibold text-paper/80 hover:border-paper/50">Ver invitación</Link>
+          <button onClick={exportCsv} className="rounded-full border border-paper/20 px-3 py-1.5 font-semibold text-paper/80 hover:border-paper/50">Exportar CSV</button>
+          <button onClick={() => router.invalidate()} className="rounded-full border border-paper/20 px-3 py-1.5 font-semibold text-paper/80 hover:border-paper/50">Actualizar</button>
+          <button onClick={async () => { await logout(); router.invalidate(); }} className="rounded-full px-3 py-1.5 font-semibold text-muted-foreground hover:text-destructive">Salir</button>
+        </div>
+      </header>
+
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {stats.map(([l, n, sub, c]) => (
+          <div key={l} className="rounded-2xl border border-paper/10 bg-card p-4">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{l}</p>
+            <p className={`mt-1 text-4xl font-extrabold leading-none tracking-tight ${c}`}>{n}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
           </div>
         ))}
       </div>
+
+      <nav className="mt-8 flex gap-1 overflow-x-auto border-b border-paper/10">
+        {([["guests", "Planilla"], ["codes", "Códigos"], ["songs", "Playlist"], ["copy", "Textos"]] as const).map(([k, l]) => (
+          <button key={k} onClick={() => setTab(k)} className={`-mb-px whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-bold transition ${tab === k ? "border-sun text-paper" : "border-transparent text-muted-foreground hover:text-paper"}`}>{l}</button>
+        ))}
+      </nav>
+
+      {tab === "copy" && <CopyEditor initial={data.copy} />}
+      {tab === "songs" && <SongList songs={data.songs ?? []} onChange={() => router.invalidate()} />}
+      {tab === "codes" && <Codes codes={data.codes ?? []} onChange={() => router.invalidate()} />}
+      {tab === "guests" && <>
       <div className="mt-6 flex flex-wrap items-center gap-2">
-        {([["all", "Todos"], ["paid", "Con barra libre"], ["unpaid", "Sin barra libre"]] as const).map(([k, l]) => (
+        {([["all", "Todos"], ["confirmed", "Confirmados"], ["pending", "Sin confirmar"]] as const).map(([k, l]) => (
+          <button key={k} onClick={() => setStatus(k)}
+            className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${status === k ? "bg-sun text-ink" : "bg-card text-paper/70 hover:text-paper"}`}>{l}</button>
+        ))}
+        <span className="mx-1 h-5 w-px bg-paper/15" />
+        {([["all", "Todas"], ["paid", "Con barra libre"], ["unpaid", "Sin barra libre"]] as const).map(([k, l]) => (
           <button key={k} onClick={() => setFilter(k)}
-            className={`rounded-full border px-3 py-1 text-sm font-semibold ${filter === k ? "border-paper bg-paper text-ink" : "border-paper/30 text-paper"}`}>{l}</button>
+            className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${filter === k ? "bg-lime text-ink" : "bg-card text-paper/70 hover:text-paper"}`}>{l}</button>
         ))}
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar nombre o email"
-          className="ml-auto h-9 w-full max-w-xs rounded-full border-2 border-input bg-transparent px-4 text-sm outline-none focus:border-ring" />
+          className="ml-auto h-9 w-full max-w-xs rounded-full border border-paper/15 bg-card px-4 text-sm outline-none placeholder:text-muted-foreground focus:border-sun" />
       </div>
+      {!data.sheetReady && <p className="mt-4 rounded-2xl border-2 border-destructive bg-destructive/10 p-3 text-sm font-semibold text-destructive">La base todavía no tiene las columnas de la planilla (migración 0009). Hasta que Lovable la aplique, no se puede editar ni cargar invitados a mano. Si no se aplica sola, corré el SQL de la migración en Cloud → Database.</p>}
       <GuestSheet guests={shown} total={data.guests.length} onChange={() => router.invalidate()} />
+      </>}
     </main>
   );
 }
@@ -129,12 +162,10 @@ function CopyEditor({ initial }: { initial: Copy }) {
   const [state, setState] = useState<"idle" | "saving" | "ok" | "err">("idle");
   const [reason, setReason] = useState("");
   return (
-    <section className="mt-6 rounded-2xl bg-card p-4">
-      <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-left">
-        <span className="text-lg font-bold">Textos de la invitación</span>
-        <span className="text-sm text-muted-foreground">{open ? "Cerrar" : "Editar"}</span>
-      </button>
-      {open && (
+    <section className="mt-6 rounded-2xl border border-paper/10 bg-card p-5">
+      <h2 className="text-lg font-bold">Textos de la invitación</h2>
+      <p className="mt-1 text-sm text-muted-foreground">Lo que guardes acá se ve en la portada al instante.</p>
+      {true && (
         <form className="mt-4 space-y-3" onSubmit={async (e) => {
           e.preventDefault(); setState("saving");
           try {
@@ -185,12 +216,9 @@ function SongList({ songs, onChange }: { songs: { id: string; title: string; art
   }
   const copyIds = () => navigator.clipboard.writeText(songs.map((s) => `spotify:track:${s.id}`).join("\n"));
   return (
-    <section className="mt-4 rounded-2xl bg-card p-4">
-      <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-left">
-        <span className="text-lg font-bold">Playlist pedida <span className="text-lime">{songs.length}</span></span>
-        <span className="text-sm text-muted-foreground">{open ? "Cerrar" : "Ver"}</span>
-      </button>
-      {open && (
+    <section className="mt-6 rounded-2xl border border-paper/10 bg-card p-5">
+      <h2 className="text-lg font-bold">Playlist pedida <span className="text-lime">{songs.length}</span></h2>
+      {true && (
         <div className="mt-4 space-y-2">
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           {songs.length > 0 && (
@@ -225,11 +253,8 @@ function Codes({ codes, onChange }: { codes: CodeRow[]; onChange: () => void }) 
   const [err, setErr] = useState("");
   return (
     <section className="mt-4 rounded-2xl bg-card p-4">
-      <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-left">
-        <span className="text-lg font-bold">Códigos de barra libre <span className="text-lime">{codes.length}</span></span>
-        <span className="text-sm text-muted-foreground">{open ? "Cerrar" : "Ver"}</span>
-      </button>
-      {open && (
+      <h2 className="text-lg font-bold">Códigos de barra libre <span className="text-lime">{codes.length}</span></h2>
+      {true && (
         <div className="mt-4 space-y-4">
           <form className="grid grid-cols-2 gap-2 rounded-xl bg-muted/40 p-3 sm:grid-cols-5" onSubmit={async (e) => {
             e.preventDefault(); setErr("");
@@ -268,7 +293,7 @@ function Codes({ codes, onChange }: { codes: CodeRow[]; onChange: () => void }) 
   );
 }
 
-type GuestRow = { id: string; fullName: string; email: string; placeholderEmail: boolean; invitedBy: string | null; invitedCount: number; createdAt: string; receiptUrl: string | null; discount: { code: string; kind: "free" | "percent"; value: number } | null; notes: string; manualBar: boolean; addedByAdmin: boolean; shareCode: string; hosts: Host[]; hostsResolved: Host[]; extras: number };
+type GuestRow = { id: string; fullName: string; email: string; placeholderEmail: boolean; invitedBy: string | null; invitedCount: number; createdAt: string; receiptUrl: string | null; discount: { code: string; kind: "free" | "percent"; value: number } | null; notes: string; manualBar: boolean; addedByAdmin: boolean; shareCode: string; hosts: Host[]; hostsResolved: Host[]; extras: number; extraNames: string[]; confirmed: boolean };
 
 function Cell({ value, onSave, placeholder, type = "text", className = "" }: { value: string; onSave: (v: string) => Promise<void>; placeholder?: string; type?: string; className?: string }) {
   const [v, setV] = useState(value);
@@ -278,11 +303,13 @@ function Cell({ value, onSave, placeholder, type = "text", className = "" }: { v
   return (
     <input type={type} value={v} placeholder={placeholder} onChange={(e) => setV(e.target.value)} onBlur={commit}
       onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") { setV(last.current); (e.target as HTMLInputElement).blur(); } }}
-      className={`h-9 w-full rounded-md border border-transparent bg-transparent px-2 text-sm outline-none hover:border-input focus:border-ring focus:bg-ink ${className}`} />
+      className={`h-9 w-full cursor-text rounded-md border border-transparent bg-transparent px-2 text-sm outline-none focus:border-ring focus:bg-ink ${className}`} />
   );
 }
 
-function GuestSheet({ guests, total, onChange }: { guests: GuestRow[]; total: number; onChange: () => void }) {
+function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[]; total: number; onChange: () => void }) {
+  const [guests, setGuests] = useState<GuestRow[]>(incoming);
+  useEffect(() => { setGuests(incoming); }, [incoming]);
   const update = useServerFn(adminUpdateGuest);
   const remove = useServerFn(adminDeleteGuest);
   const add = useServerFn(adminAddGuests);
@@ -307,11 +334,25 @@ function GuestSheet({ guests, total, onChange }: { guests: GuestRow[]; total: nu
   const common = guests.filter((g) => g.hostsResolved.length === 3).length;
   const unassigned = guests.filter((g) => g.hostsResolved.length === 0).length;
   const toggle = (hs: Host[], h: Host) => hs.includes(h) ? hs.filter((x) => x !== h) : [...hs, h];
-  async function patch(id: string, data: { fullName?: string; email?: string; notes?: string; manualBar?: boolean; hosts?: Host[]; extras?: number }) {
+  const parseExtras = (v: string) => { const t = v.trim(); if (!t) return { extras: 0, extraNames: [] as string[] }; if (/^\+?\d+$/.test(t)) return { extras: Number(t.replace("+", "")), extraNames: [] as string[] }; const names = t.split(/[,;+]/).map((x) => x.trim()).filter(Boolean); return { extras: names.length, extraNames: names }; };
+  async function patch(id: string, data: { fullName?: string; email?: string; notes?: string; manualBar?: boolean; hosts?: Host[]; extras?: number; extraNames?: string[]; confirmed?: boolean }) {
     setMsg("");
-    const r = await update({ data: { id, ...data } });
-    if (!r.ok) setMsg(r.reason ?? "No se pudo guardar");
-    onChange();
+    // Optimista: se refleja al instante y recién después se guarda; no recarga todo el panel.
+    setGuests((gs) => gs.map((g) => g.id !== id ? g : {
+      ...g,
+      ...(data.fullName !== undefined ? { fullName: data.fullName } : {}),
+      ...(data.email !== undefined ? { email: data.email, placeholderEmail: !data.email } : {}),
+      ...(data.notes !== undefined ? { notes: data.notes } : {}),
+      ...(data.manualBar !== undefined ? { manualBar: data.manualBar } : {}),
+      ...(data.hosts !== undefined ? { hosts: data.hosts, hostsResolved: data.hosts } : {}),
+      ...(data.extras !== undefined ? { extras: data.extras } : {}),
+      ...(data.extraNames !== undefined ? { extraNames: data.extraNames, extras: Math.max(data.extras ?? 0, data.extraNames.length) } : {}),
+      ...(data.confirmed !== undefined ? { confirmed: data.confirmed } : {}),
+    }));
+    try {
+      const r = await update({ data: { id, ...data } });
+      if (!r.ok) { setMsg(r.reason ?? "No se pudo guardar"); onChange(); }
+    } catch { setMsg("No se pudo guardar"); onChange(); }
   }
   async function addOne(e: React.FormEvent) {
     e.preventDefault(); setMsg("");
@@ -326,10 +367,11 @@ function GuestSheet({ guests, total, onChange }: { guests: GuestRow[]; total: nu
       const parts = l.split(/[,;\t]/).map((x) => x.trim()).filter(Boolean);
       const fullName = parts.shift() ?? "";
       const email = parts.find((x) => x.includes("@"));
-      const extrasRaw = parts.find((x) => /^\+\d+$/.test(x));
+      const extrasRaw = parts.find((x) => /^\+\d+$/.test(x) || /^\+\s*[a-záéíóúñ]/i.test(x));
       const pago = parts.find((x) => /^(si|sí|no)$/i.test(x));
       const notes = parts.filter((x) => x !== email && x !== extrasRaw && x !== pago).join(" · ");
-      return { fullName, email, extras: extrasRaw ? Number(extrasRaw.slice(1)) : 0, manualBar: !!pago && /^s/i.test(pago), notes: [notes, pago && /^no$/i.test(pago) ? "no paga" : ""].filter(Boolean).join(" · ") || undefined };
+      const ex = extrasRaw ? (/^\+\d+$/.test(extrasRaw) ? { extras: Number(extrasRaw.slice(1)), extraNames: [] as string[] } : (() => { const names = extrasRaw.replace(/^\+\s*/, "").split(/\s*\+\s*/).map((x) => x.trim()).filter(Boolean); return { extras: names.length, extraNames: names }; })()) : { extras: 0, extraNames: [] as string[] };
+      return { fullName, email, ...ex, manualBar: !!pago && /^s/i.test(pago), notes: [notes, pago && /^no$/i.test(pago) ? "no paga" : ""].filter(Boolean).join(" · ") || undefined };
     }).filter((r) => r.fullName.length >= 2);
     if (!rows.length) return setMsg("No encontré nombres en el texto");
     const r = await add({ data: { rows, hosts: newHosts } });
@@ -339,27 +381,25 @@ function GuestSheet({ guests, total, onChange }: { guests: GuestRow[]; total: nu
   const link = (g: GuestRow) => `${window.location.origin}/i/${g.shareCode}`;
 
   return (
-    <section className="mt-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-lg font-bold">Planilla <span className="text-muted-foreground">{ordered.length}/{total}</span></h2>
-        <button onClick={() => setBulk(!bulk)} className="ml-auto text-sm text-muted-foreground underline">{bulk ? "Cerrar" : "Pegar lista"}</button>
-      </div>
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button onClick={() => setGroup("all")} className={`rounded-full border px-3 py-1 text-xs font-bold ${group === "all" ? "border-paper bg-paper text-ink" : "border-paper/30"}`}>Todos</button>
+    <section className="mt-5">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Invitados de</span>
+        <button onClick={() => setGroup("all")} className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${group === "all" ? "bg-paper text-ink" : "bg-card text-paper/70 hover:text-paper"}`}>Todos</button>
         {counts.map((h) => (
-          <button key={h.key} onClick={() => setGroup(h.key)} className={`rounded-full px-3 py-1 text-xs font-bold text-ink ${hostColor[h.key]} ${group === h.key ? "ring-2 ring-paper" : "opacity-80"}`}>{h.label} · {h.n}</button>
+          <button key={h.key} onClick={() => setGroup(h.key)} className={`rounded-full px-3 py-1.5 text-xs font-bold text-ink transition ${hostColor[h.key]} ${group === h.key ? "ring-2 ring-paper ring-offset-2 ring-offset-background" : "opacity-70 hover:opacity-100"}`}>{h.label} <span className="opacity-60">{h.n}</span></button>
         ))}
-        <button onClick={() => setGroup("none")} className={`rounded-full border px-3 py-1 text-xs font-bold ${group === "none" ? "border-paper bg-paper text-ink" : "border-paper/30"}`}>Sin asignar · {unassigned}</button>
-        <span className="text-xs text-muted-foreground">En común: {common}</span>
-        <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">Cargar como invitado de
-          {HOSTS.map((h) => (
-            <button key={h.key} type="button" onClick={() => setNewHosts(toggle(newHosts, h.key))} className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${newHosts.includes(h.key) ? `${hostColor[h.key]} text-ink` : "border border-paper/30 text-paper"}`}>{h.label}</button>
-          ))}
-        </span>
+        <button onClick={() => setGroup("none")} className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${group === "none" ? "bg-paper text-ink" : "bg-card text-paper/70 hover:text-paper"}`}>Sin asignar <span className="opacity-60">{unassigned}</span></button>
+        <span className="text-xs text-muted-foreground">· en común {common}</span>
+        <button onClick={() => setBulk(!bulk)} className={`ml-auto rounded-full px-3 py-1.5 text-xs font-bold transition ${bulk ? "bg-paper text-ink" : "border border-paper/20 text-paper/80 hover:border-paper/50"}`}>{bulk ? "Cerrar" : "Pegar lista"}</button>
       </div>
       {bulk && (
-        <div className="mt-3 rounded-2xl bg-card p-4">
-          <p className="text-xs text-muted-foreground">Una persona por línea, separado por comas: <span className="font-mono">Nombre Apellido, email, +2, SI, nota</span>. Solo el nombre es obligatorio; <span className="font-mono">+2</span> son acompañantes, <span className="font-mono">SI/NO</span> es si pagó la barra, el resto va a notas. Podés pegar directo desde Excel.</p>
+        <div className="mt-3 rounded-2xl border border-paper/10 bg-card p-4">
+          <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">Cargar como invitado de
+            {HOSTS.map((h) => (
+              <button key={h.key} type="button" onClick={() => setNewHosts(toggle(newHosts, h.key))} className={`rounded-full px-2.5 py-1 text-[11px] font-bold transition ${newHosts.includes(h.key) ? `${hostColor[h.key]} text-ink` : "border border-paper/30 text-paper/70"}`}>{h.label}</button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">Una persona por línea, separado por comas: <span className="font-mono">Nombre Apellido, email, +2, SI, nota</span>. Solo el nombre es obligatorio; <span className="font-mono">+2</span> son acompañantes (o con nombres: <span className="font-mono">+Juan +Ana</span>), <span className="font-mono">SI/NO</span> es si pagó la barra, el resto va a notas. Podés pegar directo desde Excel.</p>
           <textarea value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={6} placeholder={"Juan Pérez, juan@mail.com\nAna Gómez"}
             className="mt-2 w-full rounded-xl border-2 border-input bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-ring" />
           <button onClick={addBulk} className="mt-2 h-10 rounded-full bg-primary px-5 text-sm font-extrabold text-primary-foreground">Agregar todos</button>
@@ -367,15 +407,16 @@ function GuestSheet({ guests, total, onChange }: { guests: GuestRow[]; total: nu
       )}
       {msg && <p className="mt-2 text-sm font-semibold text-sun">{msg}</p>}
       <div className="mt-3 overflow-x-auto rounded-2xl border border-paper/10 bg-card">
-        <table className="w-full min-w-[1040px] border-collapse text-left text-sm">
-          <thead className="bg-muted/40 text-[11px] uppercase tracking-wider text-muted-foreground">
+        <table className="w-full min-w-[1180px] border-collapse text-left text-sm">
+          <thead className="sticky top-0 z-10 bg-card text-[11px] uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="w-8 px-2 py-2">#</th>
+              <th className="w-8 px-2 py-2" title="Confirmado">✓</th>
               <th className="px-2 py-2">Nombre</th>
               <th className="px-2 py-2">Email</th>
               <th className="w-36 px-2 py-2">Invitado de</th>
-              <th className="w-14 px-2 py-2 text-center">+Acomp.</th>
-              <th className="w-20 px-2 py-2 text-center">Barra</th>
+              <th className="w-40 px-2 py-2">Acompañantes</th>
+              <th className="w-28 px-2 py-2 text-center">Barra libre</th>
               <th className="px-2 py-2">Invitado por</th>
               <th className="px-2 py-2">Notas</th>
               <th className="w-24 px-2 py-2">Link</th>
@@ -389,15 +430,16 @@ function GuestSheet({ guests, total, onChange }: { guests: GuestRow[]; total: nu
               const label = comboLabel(g.hostsResolved);
               const newGroup = group === "all" && (!prev || comboLabel(prev.hostsResolved) !== label);
               const inherited = !g.hosts.length && g.hostsResolved.length > 0;
-              return (<>
+              return (<Fragment key={g.id}>
                 {newGroup && (
-                  <tr key={`h-${label}`} className="border-t border-paper/10">
-                    <td colSpan={10} className="px-2 pb-1 pt-3"><span className={`rounded-full px-3 py-0.5 text-[11px] font-extrabold uppercase tracking-wider ${g.hostsResolved.length === 1 ? `${hostColor[g.hostsResolved[0]!]} text-ink` : g.hostsResolved.length ? "bg-paper text-ink" : "bg-muted text-paper"}`}>{g.hostsResolved.length ? `Invitados ${g.hostsResolved.length === 3 ? "en común" : "de " + label}` : "Sin asignar"}</span></td>
+                  <tr className="border-t border-paper/10">
+                    <td colSpan={11} className="bg-muted/20 px-3 py-2"><span className={`inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider`}><span className={`inline-block h-2.5 w-2.5 rounded-full ${g.hostsResolved.length === 1 ? hostColor[g.hostsResolved[0]!] : g.hostsResolved.length ? "bg-paper" : "bg-muted-foreground"}`} />{g.hostsResolved.length ? `Invitados ${g.hostsResolved.length === 3 ? "en común" : "de " + label}` : "Sin asignar"}</span></td>
                   </tr>
                 )}
-                <tr key={g.id} className="border-t border-paper/10 hover:bg-muted/20">
+                <tr className="border-t border-paper/5 transition hover:bg-paper/[.03]">
                   <td className="px-2 py-1 text-xs text-muted-foreground">{i + 1}</td>
-                  <td className="px-1 py-1"><Cell value={g.fullName} onSave={(v) => patch(g.id, { fullName: v })} className="font-semibold" /></td>
+                  <td className="px-1 py-1 text-center"><input type="checkbox" checked={g.confirmed} onChange={(e) => patch(g.id, { confirmed: e.target.checked })} title={g.confirmed ? "Confirmado" : "Sin confirmar: todavía no se anotó en la página"} className="h-4 w-4 accent-sun" /></td>
+                  <td className="px-1 py-1"><Cell value={g.fullName} onSave={(v) => patch(g.id, { fullName: v })} className={`font-semibold ${g.confirmed ? "" : "text-paper/70"}`} /></td>
                   <td className="px-1 py-1"><Cell value={g.placeholderEmail ? "" : g.email} type="email" placeholder="sin email" onSave={(v) => patch(g.id, { email: v })} /></td>
                   <td className="px-1 py-1">
                     <span className="flex gap-1" title={inherited ? `Heredado de ${g.invitedBy}` : ""}>
@@ -408,15 +450,20 @@ function GuestSheet({ guests, total, onChange }: { guests: GuestRow[]; total: nu
                       })}
                     </span>
                   </td>
-                  <td className="px-1 py-1 text-center">
-                    <input type="number" min={0} max={20} defaultValue={g.extras} key={`${g.id}-${g.extras}`} onBlur={(e) => { const n = Number(e.target.value); if (n !== g.extras) patch(g.id, { extras: n }); }}
-                      className="h-8 w-12 rounded-md border border-transparent bg-transparent text-center text-sm outline-none hover:border-input focus:border-ring" />
+                  <td className="px-1 py-1">
+                    <Cell value={g.extraNames.length ? g.extraNames.join(", ") : g.extras ? `+${g.extras}` : ""} placeholder="+2 o nombres" onSave={(v) => patch(g.id, parseExtras(v))} />
                   </td>
                   <td className="px-2 py-1 text-center">
-                    {g.receiptUrl ? <a href={g.receiptUrl} target="_blank" rel="noreferrer" className="rounded-full bg-lime px-2 py-0.5 text-[10px] font-extrabold uppercase text-ink">ver</a>
-                      : g.discount?.kind === "free" ? <span className="rounded-full bg-lime px-2 py-0.5 text-[10px] font-extrabold uppercase text-ink">código</span>
-                      : <input type="checkbox" checked={g.manualBar} onChange={(e) => patch(g.id, { manualBar: e.target.checked })} title="Marcar barra libre pagada a mano" className="h-4 w-4 accent-lime" />}
-                    {bar === "manual" && <span className="ml-1 text-[10px] text-muted-foreground">manual</span>}
+                    {g.receiptUrl ? (
+                      <a href={g.receiptUrl} target="_blank" rel="noreferrer" title="Pagó: ver comprobante" className="inline-flex h-8 items-center gap-1 rounded-full bg-lime px-3 text-[11px] font-extrabold uppercase text-ink">✓ Pagó <span className="font-normal normal-case opacity-70">ver</span></a>
+                    ) : g.discount?.kind === "free" ? (
+                      <span title={`Código ${g.discount.code}`} className="inline-flex h-8 items-center rounded-full bg-lime px-3 text-[11px] font-extrabold uppercase text-ink">✓ Gratis</span>
+                    ) : (
+                      <button type="button" onClick={() => patch(g.id, { manualBar: !g.manualBar })} title={g.manualBar ? "Marcado como pagado a mano. Clic para desmarcar" : "Clic para marcar como pagado (efectivo, etc.)"}
+                        className={`inline-flex h-8 items-center gap-1 rounded-full px-3 text-[11px] font-extrabold uppercase transition active:scale-95 ${g.manualBar ? "bg-lime text-ink" : "border-2 border-dashed border-paper/40 text-paper/60 hover:border-sun hover:text-sun"}`}>
+                        {g.manualBar ? "✓ Pagó" : "○ Falta"}
+                      </button>
+                    )}
                   </td>
                   <td className="px-2 py-1 text-xs text-muted-foreground">{g.invitedBy ?? (g.addedByAdmin ? "cargado a mano" : "link general")}{g.invitedCount ? ` · invitó a ${g.invitedCount}` : ""}{g.discount ? ` · ${g.discount.code}` : ""}</td>
                   <td className="px-1 py-1"><Cell value={g.notes} placeholder="…" onSave={(v) => patch(g.id, { notes: v })} /></td>
@@ -425,19 +472,20 @@ function GuestSheet({ guests, total, onChange }: { guests: GuestRow[]; total: nu
                   </td>
                   <td className="px-2 py-1 text-right"><button onClick={async () => { if (confirm(`¿Borrar a ${g.fullName}?`)) { await remove({ data: { id: g.id } }); onChange(); } }} className="text-muted-foreground hover:text-destructive" aria-label="Borrar">×</button></td>
                 </tr>
-              </>);
+              </Fragment>);
             })}
-            <tr className="border-t-2 border-paper/20 bg-muted/20">
-              <td className="px-2 py-1 text-xs text-muted-foreground">+</td>
+            <tr className="border-t border-paper/15 bg-muted/10">
+              <td className="px-2 py-2 text-xs font-bold text-sun">+</td>
+              <td></td>
               <td className="px-1 py-1"><form id="add-guest" onSubmit={addOne}><input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nombre y apellido" className="h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm outline-none focus:border-ring" /></form></td>
               <td className="px-1 py-1"><input form="add-guest" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="email (opcional)" type="email" className="h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm outline-none focus:border-ring" /></td>
-              <td colSpan={7} className="px-2 py-1"><button form="add-guest" className="h-9 rounded-full bg-primary px-4 text-xs font-extrabold text-primary-foreground">Agregar</button></td>
+              <td colSpan={7} className="px-2 py-1"><button form="add-guest" className="h-9 rounded-full bg-sun px-4 text-xs font-extrabold text-ink transition active:scale-95">Agregar invitado</button></td>
             </tr>
           </tbody>
         </table>
       </div>
       {guests.length === 0 && <p className="mt-3 text-muted-foreground">{total === 0 ? "Todavía no hay invitados. Cargá el primero arriba." : "Nada que coincida."}</p>}
-      <p className="mt-2 text-xs text-muted-foreground">Clic en una celda para editar; Enter o salir de la celda guarda. "Invitado de" admite uno, dos o los tres (G = Giu, M = Manuch, T = Tincho); si no lo asignás, lo hereda de quien lo invitó con su link. "+Acomp." son los acompañantes que trae. La casilla de Barra marca pulsera pagada a mano. El botón de link copia el link personal del invitado.</p>
+      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">Clic en una celda para editar; Enter o salir de la celda guarda. "Invitado de" admite uno, dos o los tres (G = Giu, M = Manuch, T = Tincho); si no lo asignás, lo hereda de quien lo invitó con su link. "Acompañantes" acepta un número (+2) o los nombres separados por coma. La tilde ✓ es si confirmó: los que cargás a mano quedan sin confirmar hasta que se anoten en la página con el mismo nombre (se vinculan solos) o la marques vos. En Barra libre, "○ Falta" se cambia a "✓ Pagó" con un clic (para pagos en efectivo o por fuera); si subió comprobante o usó código, ya figura solo. El botón de link copia el link personal del invitado.</p>
     </section>
   );
 }

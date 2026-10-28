@@ -57,11 +57,25 @@ export const registerGuest = createServerFn({ method: "POST" })
       const { data: inv } = await db.from("guests").select("id").eq(inviterCodeColumn(data.ref), data.ref).maybeSingle();
       invitedBy = inv?.id ?? null;
     }
-    const { data: g, error } = await db
+    // Si el admin ya lo cargó a mano (sin email) con el mismo nombre, se vincula a esa fila en vez de duplicarlo.
+    const norm = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+    try {
+      const { data: pending } = await db.from("guests").select("id, full_name, email").like("email", "%@sin-email.tricumple");
+      const match = (pending ?? []).find((p) => norm(p.full_name) === norm(data.fullName));
+      if (match) {
+        const { data: linked } = await db.from("guests").update({ email: data.email, confirmed_at: new Date().toISOString(), ...(invitedBy ? { invited_by: invitedBy } : {}) }).eq("id", match.id).select("*").single();
+        if (linked) return { fullName: linked.full_name, email: linked.email, inviteCode: linked.share_code ?? linked.invite_code, qrToken: linked.qr_token, hasReceipt: !!linked.receipt_path, discount: await discountFor(db, linked.discount_code_id) };
+      }
+    } catch { /* columnas de planilla aún no migradas */ }
+    let inserted = await db
       .from("guests")
-      .insert({ full_name: data.fullName, email: data.email, invite_code: code(7), qr_token: code(16), invited_by: invitedBy })
+      .insert({ full_name: data.fullName, email: data.email, invite_code: code(7), qr_token: code(16), invited_by: invitedBy, confirmed_at: new Date().toISOString() })
       .select("*")
       .single();
+    if (inserted.error && /confirmed_at/.test(inserted.error.message)) {
+      inserted = await db.from("guests").insert({ full_name: data.fullName, email: data.email, invite_code: code(7), qr_token: code(16), invited_by: invitedBy }).select("*").single();
+    }
+    const { data: g, error } = inserted;
     if (error || !g) throw new Error("No pudimos registrarte, probá de nuevo");
     return { fullName: g.full_name, email: g.email, inviteCode: g.share_code ?? g.invite_code, qrToken: g.qr_token, hasReceipt: !!g.receipt_path, discount: null };
   });
@@ -130,10 +144,17 @@ async function isAdmin() {
 }
 
 export const adminList = createServerFn({ method: "GET" }).handler(async () => {
-  if (!(await isAdmin())) return { authorized: false as const, guests: [] };
+  if (!(await isAdmin())) return { authorized: false as const, sheetReady: false, guests: [] };
   const db = await admin();
-  const { data } = await db.from("guests").select("id, full_name, email, invited_by, created_at, receipt_path, discount_code_id, notes, manual_bar, added_by_admin, share_code, invite_code, hosts, extras").order("created_at");
-  const rows = data ?? [];
+  const full = await db.from("guests").select("id, full_name, email, invited_by, created_at, receipt_path, discount_code_id, notes, manual_bar, added_by_admin, share_code, invite_code, hosts, extras, extra_names, confirmed_at").order("created_at");
+  let sheetReady = !full.error;
+  let rows = (full.data ?? []) as Array<{ id: string; full_name: string; email: string; invited_by: string | null; created_at: string; receipt_path: string | null; discount_code_id: string | null; notes?: string | null; manual_bar?: boolean; added_by_admin?: boolean; share_code?: string | null; invite_code: string; hosts?: string[] | null; extras?: number | null; extra_names?: string[] | null; confirmed_at?: string | null }>;
+  if (full.error) {
+    // Las columnas de la planilla todavía no existen (migración 0009 sin aplicar): mostrar igual la lista.
+    const basic = await db.from("guests").select("id, full_name, email, invited_by, created_at, receipt_path, discount_code_id, share_code, invite_code").order("created_at");
+    rows = (basic.data ?? []) as typeof rows;
+    sheetReady = false;
+  }
   const { data: codes } = await db.from("discount_codes").select("id, code, kind, value");
   const codeById = new Map((codes ?? []).map((c) => [c.id, c]));
   const paths = rows.map((r) => r.receipt_path).filter((x): x is string => !!x);
@@ -152,6 +173,7 @@ export const adminList = createServerFn({ method: "GET" }).handler(async () => {
   };
   return {
     authorized: true as const,
+    sheetReady,
     guests: rows.map((r) => ({
       id: r.id,
       fullName: r.full_name,
@@ -169,6 +191,8 @@ export const adminList = createServerFn({ method: "GET" }).handler(async () => {
       hosts: (r.hosts ?? []) as Host[],
       hostsResolved: hostsOf(r),
       extras: r.extras ?? 0,
+      extraNames: r.extra_names ?? [],
+      confirmed: r.confirmed_at ? true : !r.added_by_admin,
     })),
   };
 });
@@ -182,7 +206,7 @@ const nameSchema = z.string().trim().min(2).max(100);
 
 export const adminAddGuests = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({
-    rows: z.array(z.object({ fullName: nameSchema, email: z.string().trim().max(255).optional(), extras: z.number().int().min(0).max(20).optional(), notes: z.string().trim().max(300).optional(), manualBar: z.boolean().optional() })).min(1).max(300),
+    rows: z.array(z.object({ fullName: nameSchema, email: z.string().trim().max(255).optional(), extras: z.number().int().min(0).max(20).optional(), extraNames: z.array(z.string().trim().max(80)).max(20).optional(), notes: z.string().trim().max(300).optional(), manualBar: z.boolean().optional() })).min(1).max(300),
     hosts: hostsSchema.optional(),
   }).parse(d))
   .handler(async ({ data }) => {
@@ -199,7 +223,7 @@ export const adminAddGuests = createServerFn({ method: "POST" })
       } else {
         email = `${code(10)}@sin-email.tricumple`;
       }
-      const { error } = await db.from("guests").insert({ full_name: r.fullName, email, invite_code: code(7), qr_token: code(16), added_by_admin: true, hosts: data.hosts ?? [], extras: r.extras ?? 0, notes: r.notes || null, manual_bar: !!r.manualBar });
+      const { error } = await db.from("guests").insert({ full_name: r.fullName, email, invite_code: code(7), qr_token: code(16), added_by_admin: true, hosts: data.hosts ?? [], extras: Math.max(r.extras ?? 0, (r.extraNames ?? []).length), extra_names: r.extraNames ?? [], notes: r.notes || null, manual_bar: !!r.manualBar });
       if (error) skipped.push(error.code === "23505" ? `${r.fullName} (ya estaba)` : `${r.fullName}`); else added++;
     }
     return { ok: true, added, skipped, reason: null };
@@ -214,13 +238,17 @@ export const adminUpdateGuest = createServerFn({ method: "POST" })
     manualBar: z.boolean().optional(),
     hosts: hostsSchema.optional(),
     extras: z.number().int().min(0).max(20).optional(),
+    extraNames: z.array(z.string().trim().max(80)).max(20).optional(),
+    confirmed: z.boolean().optional(),
   }).parse(d))
   .handler(async ({ data }) => {
     if (!(await isAdmin())) return { ok: false, reason: "No autorizado" };
     const db = await admin();
-    const patch: { full_name?: string; email?: string; notes?: string | null; manual_bar?: boolean; hosts?: Host[]; extras?: number } = {};
+    const patch: { full_name?: string; email?: string; notes?: string | null; manual_bar?: boolean; hosts?: Host[]; extras?: number; extra_names?: string[]; confirmed_at?: string | null } = {};
     if (data.hosts !== undefined) patch.hosts = [...new Set(data.hosts)];
     if (data.extras !== undefined) patch.extras = data.extras;
+    if (data.extraNames !== undefined) { patch.extra_names = data.extraNames.filter(Boolean); patch.extras = Math.max(data.extras ?? 0, patch.extra_names.length); }
+    if (data.confirmed !== undefined) patch.confirmed_at = data.confirmed ? new Date().toISOString() : null;
     if (data.fullName !== undefined) patch.full_name = data.fullName;
     if (data.email !== undefined) {
       const e = data.email.toLowerCase();
