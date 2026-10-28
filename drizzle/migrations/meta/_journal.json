@@ -78,6 +78,13 @@
       "when": 1793221862124,
       "tag": "0010_add_guest_admin_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793222709583,
+      "tag": "0011_add_guest_extra_names_and_confirmed_at",
+      "breakpoints": true
     }
   ]
 }
