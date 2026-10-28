@@ -92,6 +92,13 @@
       "when": 1793225134217,
       "tag": "0012_guest_referrer",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793225669908,
+      "tag": "0013_add_guest_referrer_name",
+      "breakpoints": true
     }
   ]
 }
