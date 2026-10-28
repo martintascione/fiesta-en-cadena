@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
-import { adminList, adminLogin, adminLogout, adminSongs, adminRemoveSong, adminCodes, createCode, updateCode, getCopy, saveCopy } from "@/lib/guests.functions";
+import { useEffect, useRef, useState } from "react";
+import { adminList, adminLogin, adminLogout, adminSongs, adminRemoveSong, adminCodes, createCode, updateCode, getCopy, saveCopy, adminAddGuests, adminUpdateGuest, adminDeleteGuest, HOSTS, type Host } from "@/lib/guests.functions";
 import { Trash2, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { COPY_FIELDS, type Copy } from "@/lib/copy";
@@ -69,17 +69,17 @@ function Admin() {
     );
   }
 
-  const paid = data.guests.filter((g) => g.receiptUrl || g.discount?.kind === "free").length;
+  const paid = data.guests.filter((g) => g.receiptUrl || g.discount?.kind === "free" || g.manualBar).length;
   const referred = data.guests.filter((g) => g.invitedBy).length;
   const shown = data.guests.filter((g) => {
-    const hasBar = !!g.receiptUrl || g.discount?.kind === "free";
+    const hasBar = !!g.receiptUrl || g.discount?.kind === "free" || g.manualBar;
     if (filter === "paid" && !hasBar) return false;
     if (filter === "unpaid" && hasBar) return false;
     const t = q.trim().toLowerCase();
     return !t || g.fullName.toLowerCase().includes(t) || g.email.toLowerCase().includes(t);
   });
   const exportCsv = () => {
-    const rows = [["Nombre", "Email", "Invitado por", "Invitó a", "Pulsera", "Código", "Registrado"], ...data.guests.map((g) => [g.fullName, g.email, g.invitedBy ?? "", String(g.invitedCount), g.receiptUrl ? "comprobante" : g.discount?.kind === "free" ? "código" : "no", g.discount?.code ?? "", new Date(g.createdAt).toLocaleString("es-AR")])];
+    const rows = [["Nombre", "Email", "Invitado de", "Acompañantes", "Invitado por", "Invitó a", "Pulsera", "Código", "Notas", "Link", "Registrado"], ...data.guests.map((g) => [g.fullName, g.placeholderEmail ? "" : g.email, g.hostsResolved.map((h) => HOSTS.find((x) => x.key === h)?.label).join(" + "), String(g.extras ?? 0), g.invitedBy ?? "", String(g.invitedCount), g.receiptUrl ? "comprobante" : g.discount?.kind === "free" ? "código" : g.manualBar ? "manual" : "no", g.discount?.code ?? "", g.notes, `${window.location.origin}/i/${g.shareCode}`, new Date(g.createdAt).toLocaleString("es-AR")])];
     const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
@@ -102,7 +102,7 @@ function Admin() {
       <SongList songs={data.songs ?? []} onChange={() => router.invalidate()} />
       <Codes codes={data.codes ?? []} onChange={() => router.invalidate()} />
       <div className="mt-8 grid grid-cols-3 gap-2">
-        {[["Invitados", data.guests.length, "bg-sky"], ["Barra libre", paid, "bg-lime"], ["Por referidos", referred, "bg-bubble"]].map(([l, n, c]) => (
+        {[["Invitados", `${data.guests.length}${data.guests.reduce((a, g) => a + (g.extras ?? 0), 0) ? ` +${data.guests.reduce((a, g) => a + (g.extras ?? 0), 0)}` : ""}`, "bg-sky"], ["Barra libre", paid, "bg-lime"], ["Por referidos", referred, "bg-bubble"]].map(([l, n, c]) => (
           <div key={String(l)} className={`rounded-2xl p-4 text-ink ${c}`}>
             <p className="text-3xl font-extrabold leading-none">{n}</p>
             <p className="mt-1 text-xs font-bold uppercase tracking-wider">{l}</p>
@@ -117,31 +117,7 @@ function Admin() {
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar nombre o email"
           className="ml-auto h-9 w-full max-w-xs rounded-full border-2 border-input bg-transparent px-4 text-sm outline-none focus:border-ring" />
       </div>
-      <ul className="mt-4 space-y-2">
-        {shown.map((g) => (
-          <li key={g.id} className="rounded-2xl bg-card p-4">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <p className="text-lg font-bold">{g.fullName}</p>
-              <span className={`rounded-full px-3 py-0.5 text-xs font-bold text-ink ${g.invitedBy ? "bg-bubble" : "bg-sky"}`}>
-                {g.invitedBy ? `de parte de ${g.invitedBy}` : "link general"}
-              </span>
-            </div>
-            <p className="text-sm text-muted-foreground">{g.email} · invitó a {g.invitedCount} · {new Date(g.createdAt).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</p>
-            {g.discount && <span className="mr-2 mt-2 inline-block rounded-full bg-sun px-3 py-1 text-xs font-extrabold uppercase text-ink">Código {g.discount.code}{g.discount.kind === "percent" ? ` · -${g.discount.value}%` : " · gratis"}</span>}
-            {g.receiptUrl ? (
-              <a href={g.receiptUrl} target="_blank" rel="noreferrer"
-                className="mt-2 inline-flex items-center gap-2 rounded-full bg-lime px-3 py-1 text-xs font-extrabold uppercase text-ink">
-                ✓ Pulsera · ver comprobante
-              </a>
-            ) : g.discount?.kind === "free" ? (
-              <span className="mt-2 inline-block rounded-full bg-lime px-3 py-1 text-xs font-extrabold uppercase text-ink">✓ Pulsera · código</span>
-            ) : (
-              <span className="mt-2 inline-block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sin pulsera</span>
-            )}
-          </li>
-        ))}
-        {shown.length === 0 && <p className="text-muted-foreground">{data.guests.length === 0 ? "Todavía no se anotó nadie." : "Nada que coincida."}</p>}
-      </ul>
+      <GuestSheet guests={shown} total={data.guests.length} onChange={() => router.invalidate()} />
     </main>
   );
 }
@@ -288,6 +264,180 @@ function Codes({ codes, onChange }: { codes: CodeRow[]; onChange: () => void }) 
           {codes.length === 0 && <p className="text-muted-foreground">Todavía no creaste códigos.</p>}
         </div>
       )}
+    </section>
+  );
+}
+
+type GuestRow = { id: string; fullName: string; email: string; placeholderEmail: boolean; invitedBy: string | null; invitedCount: number; createdAt: string; receiptUrl: string | null; discount: { code: string; kind: "free" | "percent"; value: number } | null; notes: string; manualBar: boolean; addedByAdmin: boolean; shareCode: string; hosts: Host[]; hostsResolved: Host[]; extras: number };
+
+function Cell({ value, onSave, placeholder, type = "text", className = "" }: { value: string; onSave: (v: string) => Promise<void>; placeholder?: string; type?: string; className?: string }) {
+  const [v, setV] = useState(value);
+  const last = useRef(value);
+  useEffect(() => { setV(value); last.current = value; }, [value]);
+  async function commit() { if (v.trim() !== last.current.trim()) { last.current = v; await onSave(v.trim()); } }
+  return (
+    <input type={type} value={v} placeholder={placeholder} onChange={(e) => setV(e.target.value)} onBlur={commit}
+      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") { setV(last.current); (e.target as HTMLInputElement).blur(); } }}
+      className={`h-9 w-full rounded-md border border-transparent bg-transparent px-2 text-sm outline-none hover:border-input focus:border-ring focus:bg-ink ${className}`} />
+  );
+}
+
+function GuestSheet({ guests, total, onChange }: { guests: GuestRow[]; total: number; onChange: () => void }) {
+  const update = useServerFn(adminUpdateGuest);
+  const remove = useServerFn(adminDeleteGuest);
+  const add = useServerFn(adminAddGuests);
+  const [msg, setMsg] = useState("");
+  const [bulk, setBulk] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [copied, setCopied] = useState("");
+
+  const [group, setGroup] = useState<"all" | Host | "none">("all");
+  const [newHosts, setNewHosts] = useState<Host[]>([]);
+  const hostLabel = (h: Host) => HOSTS.find((x) => x.key === h)?.label ?? h;
+  const hostColor: Record<Host, string> = { giu: "bg-bubble", manuch: "bg-sky", tincho: "bg-lime" };
+  const comboLabel = (hs: Host[]) => hs.length === 0 ? "Sin asignar" : hs.length === 3 ? "En común (los 3)" : hs.map(hostLabel).join(" + ");
+  const comboRank = (hs: Host[]) => hs.length === 3 ? 0 : hs.length === 1 ? 1 + HOSTS.findIndex((x) => x.key === hs[0]) : hs.length === 2 ? 10 : 99;
+  const sortedHosts = (hs: Host[]) => [...hs].sort((x, y) => HOSTS.findIndex((h) => h.key === x) - HOSTS.findIndex((h) => h.key === y));
+  const ordered = [...guests].map((g) => ({ ...g, hostsResolved: sortedHosts(g.hostsResolved) })).sort((a, b) =>
+    comboRank(a.hostsResolved) - comboRank(b.hostsResolved) || comboLabel(a.hostsResolved).localeCompare(comboLabel(b.hostsResolved)) || a.fullName.localeCompare(b.fullName, "es"),
+  ).filter((g) => group === "all" ? true : group === "none" ? g.hostsResolved.length === 0 : g.hostsResolved.includes(group));
+  const counts = HOSTS.map((h) => ({ ...h, n: guests.filter((g) => g.hostsResolved.includes(h.key)).length }));
+  const common = guests.filter((g) => g.hostsResolved.length === 3).length;
+  const unassigned = guests.filter((g) => g.hostsResolved.length === 0).length;
+  const toggle = (hs: Host[], h: Host) => hs.includes(h) ? hs.filter((x) => x !== h) : [...hs, h];
+  async function patch(id: string, data: { fullName?: string; email?: string; notes?: string; manualBar?: boolean; hosts?: Host[]; extras?: number }) {
+    setMsg("");
+    const r = await update({ data: { id, ...data } });
+    if (!r.ok) setMsg(r.reason ?? "No se pudo guardar");
+    onChange();
+  }
+  async function addOne(e: React.FormEvent) {
+    e.preventDefault(); setMsg("");
+    if (newName.trim().length < 2) return;
+    const r = await add({ data: { rows: [{ fullName: newName.trim(), email: newEmail.trim() || undefined }], hosts: newHosts } });
+    if (r.skipped.length) setMsg(`No se agregó: ${r.skipped.join(", ")}`);
+    setNewName(""); setNewEmail(""); onChange();
+  }
+  async function addBulk() {
+    setMsg("");
+    const rows = bulkText.split(/\n+/).map((l) => l.trim()).filter(Boolean).map((l) => {
+      const parts = l.split(/[,;\t]/).map((x) => x.trim()).filter(Boolean);
+      const fullName = parts.shift() ?? "";
+      const email = parts.find((x) => x.includes("@"));
+      const extrasRaw = parts.find((x) => /^\+\d+$/.test(x));
+      const pago = parts.find((x) => /^(si|sí|no)$/i.test(x));
+      const notes = parts.filter((x) => x !== email && x !== extrasRaw && x !== pago).join(" · ");
+      return { fullName, email, extras: extrasRaw ? Number(extrasRaw.slice(1)) : 0, manualBar: !!pago && /^s/i.test(pago), notes: [notes, pago && /^no$/i.test(pago) ? "no paga" : ""].filter(Boolean).join(" · ") || undefined };
+    }).filter((r) => r.fullName.length >= 2);
+    if (!rows.length) return setMsg("No encontré nombres en el texto");
+    const r = await add({ data: { rows, hosts: newHosts } });
+    setMsg(`${r.added} agregados${r.skipped.length ? ` · sin agregar: ${r.skipped.join(", ")}` : ""}`);
+    setBulkText(""); setBulk(false); onChange();
+  }
+  const link = (g: GuestRow) => `${window.location.origin}/i/${g.shareCode}`;
+
+  return (
+    <section className="mt-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="text-lg font-bold">Planilla <span className="text-muted-foreground">{ordered.length}/{total}</span></h2>
+        <button onClick={() => setBulk(!bulk)} className="ml-auto text-sm text-muted-foreground underline">{bulk ? "Cerrar" : "Pegar lista"}</button>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button onClick={() => setGroup("all")} className={`rounded-full border px-3 py-1 text-xs font-bold ${group === "all" ? "border-paper bg-paper text-ink" : "border-paper/30"}`}>Todos</button>
+        {counts.map((h) => (
+          <button key={h.key} onClick={() => setGroup(h.key)} className={`rounded-full px-3 py-1 text-xs font-bold text-ink ${hostColor[h.key]} ${group === h.key ? "ring-2 ring-paper" : "opacity-80"}`}>{h.label} · {h.n}</button>
+        ))}
+        <button onClick={() => setGroup("none")} className={`rounded-full border px-3 py-1 text-xs font-bold ${group === "none" ? "border-paper bg-paper text-ink" : "border-paper/30"}`}>Sin asignar · {unassigned}</button>
+        <span className="text-xs text-muted-foreground">En común: {common}</span>
+        <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">Cargar como invitado de
+          {HOSTS.map((h) => (
+            <button key={h.key} type="button" onClick={() => setNewHosts(toggle(newHosts, h.key))} className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${newHosts.includes(h.key) ? `${hostColor[h.key]} text-ink` : "border border-paper/30 text-paper"}`}>{h.label}</button>
+          ))}
+        </span>
+      </div>
+      {bulk && (
+        <div className="mt-3 rounded-2xl bg-card p-4">
+          <p className="text-xs text-muted-foreground">Una persona por línea, separado por comas: <span className="font-mono">Nombre Apellido, email, +2, SI, nota</span>. Solo el nombre es obligatorio; <span className="font-mono">+2</span> son acompañantes, <span className="font-mono">SI/NO</span> es si pagó la barra, el resto va a notas. Podés pegar directo desde Excel.</p>
+          <textarea value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={6} placeholder={"Juan Pérez, juan@mail.com\nAna Gómez"}
+            className="mt-2 w-full rounded-xl border-2 border-input bg-transparent px-3 py-2 font-mono text-sm outline-none focus:border-ring" />
+          <button onClick={addBulk} className="mt-2 h-10 rounded-full bg-primary px-5 text-sm font-extrabold text-primary-foreground">Agregar todos</button>
+        </div>
+      )}
+      {msg && <p className="mt-2 text-sm font-semibold text-sun">{msg}</p>}
+      <div className="mt-3 overflow-x-auto rounded-2xl border border-paper/10 bg-card">
+        <table className="w-full min-w-[1040px] border-collapse text-left text-sm">
+          <thead className="bg-muted/40 text-[11px] uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="w-8 px-2 py-2">#</th>
+              <th className="px-2 py-2">Nombre</th>
+              <th className="px-2 py-2">Email</th>
+              <th className="w-36 px-2 py-2">Invitado de</th>
+              <th className="w-14 px-2 py-2 text-center">+Acomp.</th>
+              <th className="w-20 px-2 py-2 text-center">Barra</th>
+              <th className="px-2 py-2">Invitado por</th>
+              <th className="px-2 py-2">Notas</th>
+              <th className="w-24 px-2 py-2">Link</th>
+              <th className="w-10 px-2 py-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {ordered.map((g, i) => {
+              const bar = g.receiptUrl ? "comprobante" : g.discount?.kind === "free" ? "código" : g.manualBar ? "manual" : "";
+              const prev = ordered[i - 1];
+              const label = comboLabel(g.hostsResolved);
+              const newGroup = group === "all" && (!prev || comboLabel(prev.hostsResolved) !== label);
+              const inherited = !g.hosts.length && g.hostsResolved.length > 0;
+              return (<>
+                {newGroup && (
+                  <tr key={`h-${label}`} className="border-t border-paper/10">
+                    <td colSpan={10} className="px-2 pb-1 pt-3"><span className={`rounded-full px-3 py-0.5 text-[11px] font-extrabold uppercase tracking-wider ${g.hostsResolved.length === 1 ? `${hostColor[g.hostsResolved[0]!]} text-ink` : g.hostsResolved.length ? "bg-paper text-ink" : "bg-muted text-paper"}`}>{g.hostsResolved.length ? `Invitados ${g.hostsResolved.length === 3 ? "en común" : "de " + label}` : "Sin asignar"}</span></td>
+                  </tr>
+                )}
+                <tr key={g.id} className="border-t border-paper/10 hover:bg-muted/20">
+                  <td className="px-2 py-1 text-xs text-muted-foreground">{i + 1}</td>
+                  <td className="px-1 py-1"><Cell value={g.fullName} onSave={(v) => patch(g.id, { fullName: v })} className="font-semibold" /></td>
+                  <td className="px-1 py-1"><Cell value={g.placeholderEmail ? "" : g.email} type="email" placeholder="sin email" onSave={(v) => patch(g.id, { email: v })} /></td>
+                  <td className="px-1 py-1">
+                    <span className="flex gap-1" title={inherited ? `Heredado de ${g.invitedBy}` : ""}>
+                      {HOSTS.map((h) => {
+                        const on = g.hostsResolved.includes(h.key);
+                        return <button key={h.key} type="button" onClick={() => patch(g.id, { hosts: toggle(g.hostsResolved, h.key) })}
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${on ? `${hostColor[h.key]} text-ink` : "border border-paper/20 text-muted-foreground"} ${on && inherited ? "opacity-60" : ""}`}>{h.label[0]}</button>;
+                      })}
+                    </span>
+                  </td>
+                  <td className="px-1 py-1 text-center">
+                    <input type="number" min={0} max={20} defaultValue={g.extras} key={`${g.id}-${g.extras}`} onBlur={(e) => { const n = Number(e.target.value); if (n !== g.extras) patch(g.id, { extras: n }); }}
+                      className="h-8 w-12 rounded-md border border-transparent bg-transparent text-center text-sm outline-none hover:border-input focus:border-ring" />
+                  </td>
+                  <td className="px-2 py-1 text-center">
+                    {g.receiptUrl ? <a href={g.receiptUrl} target="_blank" rel="noreferrer" className="rounded-full bg-lime px-2 py-0.5 text-[10px] font-extrabold uppercase text-ink">ver</a>
+                      : g.discount?.kind === "free" ? <span className="rounded-full bg-lime px-2 py-0.5 text-[10px] font-extrabold uppercase text-ink">código</span>
+                      : <input type="checkbox" checked={g.manualBar} onChange={(e) => patch(g.id, { manualBar: e.target.checked })} title="Marcar barra libre pagada a mano" className="h-4 w-4 accent-lime" />}
+                    {bar === "manual" && <span className="ml-1 text-[10px] text-muted-foreground">manual</span>}
+                  </td>
+                  <td className="px-2 py-1 text-xs text-muted-foreground">{g.invitedBy ?? (g.addedByAdmin ? "cargado a mano" : "link general")}{g.invitedCount ? ` · invitó a ${g.invitedCount}` : ""}{g.discount ? ` · ${g.discount.code}` : ""}</td>
+                  <td className="px-1 py-1"><Cell value={g.notes} placeholder="…" onSave={(v) => patch(g.id, { notes: v })} /></td>
+                  <td className="px-2 py-1">
+                    <button onClick={async () => { await navigator.clipboard.writeText(link(g)); setCopied(g.id); setTimeout(() => setCopied(""), 1500); }} className="rounded-full border border-paper/30 px-2 py-0.5 text-[10px] font-bold uppercase">{copied === g.id ? "copiado" : g.shareCode}</button>
+                  </td>
+                  <td className="px-2 py-1 text-right"><button onClick={async () => { if (confirm(`¿Borrar a ${g.fullName}?`)) { await remove({ data: { id: g.id } }); onChange(); } }} className="text-muted-foreground hover:text-destructive" aria-label="Borrar">×</button></td>
+                </tr>
+              </>);
+            })}
+            <tr className="border-t-2 border-paper/20 bg-muted/20">
+              <td className="px-2 py-1 text-xs text-muted-foreground">+</td>
+              <td className="px-1 py-1"><form id="add-guest" onSubmit={addOne}><input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nombre y apellido" className="h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm outline-none focus:border-ring" /></form></td>
+              <td className="px-1 py-1"><input form="add-guest" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="email (opcional)" type="email" className="h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm outline-none focus:border-ring" /></td>
+              <td colSpan={7} className="px-2 py-1"><button form="add-guest" className="h-9 rounded-full bg-primary px-4 text-xs font-extrabold text-primary-foreground">Agregar</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {guests.length === 0 && <p className="mt-3 text-muted-foreground">{total === 0 ? "Todavía no hay invitados. Cargá el primero arriba." : "Nada que coincida."}</p>}
+      <p className="mt-2 text-xs text-muted-foreground">Clic en una celda para editar; Enter o salir de la celda guarda. "Invitado de" admite uno, dos o los tres (G = Giu, M = Manuch, T = Tincho); si no lo asignás, lo hereda de quien lo invitó con su link. "+Acomp." son los acompañantes que trae. La casilla de Barra marca pulsera pagada a mano. El botón de link copia el link personal del invitado.</p>
     </section>
   );
 }

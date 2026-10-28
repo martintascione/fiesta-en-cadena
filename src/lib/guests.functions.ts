@@ -132,7 +132,7 @@ async function isAdmin() {
 export const adminList = createServerFn({ method: "GET" }).handler(async () => {
   if (!(await isAdmin())) return { authorized: false as const, guests: [] };
   const db = await admin();
-  const { data } = await db.from("guests").select("id, full_name, email, invited_by, created_at, receipt_path, discount_code_id").order("created_at");
+  const { data } = await db.from("guests").select("id, full_name, email, invited_by, created_at, receipt_path, discount_code_id, notes, manual_bar, added_by_admin, share_code, invite_code, hosts, extras").order("created_at");
   const rows = data ?? [];
   const { data: codes } = await db.from("discount_codes").select("id, code, kind, value");
   const codeById = new Map((codes ?? []).map((c) => [c.id, c]));
@@ -143,6 +143,13 @@ export const adminList = createServerFn({ method: "GET" }).handler(async () => {
     signed?.forEach((x) => x.path && x.signedUrl && urls.set(x.path, x.signedUrl));
   }
   const byId = new Map(rows.map((r) => [r.id, r.full_name]));
+  const rowById = new Map(rows.map((r) => [r.id, r]));
+  const hostsOf = (r: (typeof rows)[number], depth = 0): Host[] => {
+    const own = (r.hosts ?? []).filter((h): h is Host => h === "giu" || h === "manuch" || h === "tincho");
+    if (own.length) return own;
+    if (r.invited_by && depth < 10) { const p = rowById.get(r.invited_by); if (p) return hostsOf(p, depth + 1); }
+    return [];
+  };
   return {
     authorized: true as const,
     guests: rows.map((r) => ({
@@ -154,9 +161,86 @@ export const adminList = createServerFn({ method: "GET" }).handler(async () => {
       createdAt: r.created_at,
       receiptUrl: r.receipt_path ? urls.get(r.receipt_path) ?? null : null,
       discount: r.discount_code_id ? (() => { const c = codeById.get(r.discount_code_id); return c ? { code: c.code, kind: c.kind, value: c.value } : null; })() : null,
+      notes: r.notes ?? "",
+      manualBar: !!r.manual_bar,
+      addedByAdmin: !!r.added_by_admin,
+      shareCode: r.share_code ?? r.invite_code,
+      placeholderEmail: r.email.endsWith("@sin-email.tricumple"),
+      hosts: (r.hosts ?? []) as Host[],
+      hostsResolved: hostsOf(r),
+      extras: r.extras ?? 0,
     })),
   };
 });
+
+/* ---------- Planilla de invitados (admin) ---------- */
+export type Host = "giu" | "manuch" | "tincho";
+export const HOSTS: { key: Host; label: string }[] = [{ key: "giu", label: "Giu" }, { key: "manuch", label: "Manuch" }, { key: "tincho", label: "Tincho" }];
+const hostSchema = z.enum(["giu", "manuch", "tincho"]);
+const hostsSchema = z.array(hostSchema).max(3);
+const nameSchema = z.string().trim().min(2).max(100);
+
+export const adminAddGuests = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({
+    rows: z.array(z.object({ fullName: nameSchema, email: z.string().trim().max(255).optional(), extras: z.number().int().min(0).max(20).optional(), notes: z.string().trim().max(300).optional(), manualBar: z.boolean().optional() })).min(1).max(300),
+    hosts: hostsSchema.optional(),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    if (!(await isAdmin())) return { ok: false, added: 0, skipped: [] as string[], reason: "No autorizado" };
+    const db = await admin();
+    const skipped: string[] = [];
+    let added = 0;
+    for (const r of data.rows) {
+      let email = (r.email ?? "").trim().toLowerCase();
+      if (email) {
+        const ok = emailSchema.safeParse(email);
+        if (!ok.success) { skipped.push(`${r.fullName} (email inválido)`); continue; }
+        email = ok.data;
+      } else {
+        email = `${code(10)}@sin-email.tricumple`;
+      }
+      const { error } = await db.from("guests").insert({ full_name: r.fullName, email, invite_code: code(7), qr_token: code(16), added_by_admin: true, hosts: data.hosts ?? [], extras: r.extras ?? 0, notes: r.notes || null, manual_bar: !!r.manualBar });
+      if (error) skipped.push(error.code === "23505" ? `${r.fullName} (ya estaba)` : `${r.fullName}`); else added++;
+    }
+    return { ok: true, added, skipped, reason: null };
+  });
+
+export const adminUpdateGuest = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({
+    id: z.string().uuid(),
+    fullName: nameSchema.optional(),
+    email: z.string().trim().max(255).optional(),
+    notes: z.string().trim().max(300).optional(),
+    manualBar: z.boolean().optional(),
+    hosts: hostsSchema.optional(),
+    extras: z.number().int().min(0).max(20).optional(),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    if (!(await isAdmin())) return { ok: false, reason: "No autorizado" };
+    const db = await admin();
+    const patch: { full_name?: string; email?: string; notes?: string | null; manual_bar?: boolean; hosts?: Host[]; extras?: number } = {};
+    if (data.hosts !== undefined) patch.hosts = [...new Set(data.hosts)];
+    if (data.extras !== undefined) patch.extras = data.extras;
+    if (data.fullName !== undefined) patch.full_name = data.fullName;
+    if (data.email !== undefined) {
+      const e = data.email.toLowerCase();
+      if (e) { const ok = emailSchema.safeParse(e); if (!ok.success) return { ok: false, reason: "Email inválido" }; patch.email = ok.data; }
+    }
+    if (data.notes !== undefined) patch.notes = data.notes || null;
+    if (data.manualBar !== undefined) patch.manual_bar = data.manualBar;
+    const { error } = await db.from("guests").update(patch).eq("id", data.id);
+    if (error) return { ok: false, reason: error.code === "23505" ? "Ese email ya está en otro invitado" : "No se pudo guardar" };
+    return { ok: true, reason: null };
+  });
+
+export const adminDeleteGuest = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    if (!(await isAdmin())) return { ok: false };
+    const db = await admin();
+    const { error } = await db.from("guests").delete().eq("id", data.id);
+    return { ok: !error };
+  });
 
 const tokenSchema = z.string().min(10).max(40);
 

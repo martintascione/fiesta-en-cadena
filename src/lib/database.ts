@@ -25,7 +25,7 @@ type DiscountCode = {
   created_at: string;
 };
 
-type GuestExtra = { discount_code_id: string | null; discount_applied_at: string | null };
+type GuestExtra = { discount_code_id: string | null; discount_applied_at: string | null; notes: string | null; manual_bar: boolean; added_by_admin: boolean; share_code: string | null; hosts: string[]; extras: number };
 type GuestsTable = Database["public"]["Tables"]["guests"];
 
 export type AppDatabase = Omit<Database, "public"> & {

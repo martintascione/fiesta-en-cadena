@@ -8,8 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { DEFAULT_COPY, type Copy } from "@/lib/copy";
 import { Playlist } from "@/components/Playlist";
-import { invitationLink } from "@/lib/invitation-links";
-import { CommunityPlaylist } from "@/components/CommunityPlaylist";
 
 function Splat({ className }: { className?: string }) {
   return (
@@ -26,20 +24,6 @@ const NAMES = [
   { name: "Manuch", accent: "border-bubble bg-bubble/10 text-bubble" },
   { name: "Tincho", accent: "border-lime bg-lime/10 text-lime" },
 ];
-
-const HIGHLIGHT = "barra libre";
-
-function Synopsis({ text }: { text: string }) {
-  const i = text.toLowerCase().indexOf(HIGHLIGHT);
-  if (i < 0) return <>{text}</>;
-  return (
-    <>
-      {text.slice(0, i)}
-      <span className="night-chip">{text.slice(i, i + HIGHLIGHT.length)}</span>
-      {text.slice(i + HIGHLIGHT.length)}
-    </>
-  );
-}
 
 export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAULT_COPY }: { refCode?: string | undefined; inviterName?: string | null | undefined; mainPoster?: boolean; copy?: Copy }) {
   const c = copy;
@@ -88,24 +72,25 @@ export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAUL
       <div className={mainPoster && !guest ? "night-layout relative mx-auto flex flex-col" : "relative mx-auto flex max-w-md flex-col px-5 pb-16 pt-[max(2rem,env(safe-area-inset-top))]"}>
         {mainPoster ? !guest && <>
           <header className="night-top">
+            <span className="night-brand">the<br />tricumple<br />stories<span className="night-dot">.</span></span>
             <span className="night-tags">{[c.tag1, c.tag2, c.tag3].filter(Boolean).map((t) => <span key={t}>{t}</span>)}</span>
           </header>
           <section className="night-hero">
             <p className="night-eyebrow">{c.eyebrow}</p>
             <h1 className="night-title">Tri<svg aria-hidden className="night-spark" viewBox="0 0 100 100"><path d="M50 0 L58 40 L100 50 L58 60 L50 100 L42 60 L0 50 L42 40 Z" /></svg>{c.title.slice(3)}</h1>
             <p className="night-dir"><span className="night-rule" aria-hidden />{c.hosts}</p>
-            <p className="night-synopsis"><Synopsis text={c.synopsis} /></p>
+            <p className="night-synopsis">{c.synopsis}</p>
             {c.joke && <p className="night-joke">{c.joke}</p>}
             <dl className="night-info">
               <div><dt>Cuándo</dt><dd>{c.when}<br /><small>{c.whenNote}</small></dd></div>
               <div><dt>Dónde</dt><dd>{c.where}<br /><small>{c.whereNote}</small></dd></div>
-              <div><dt>Barra libre</dt><dd>{c.bar}<small>{c.barNote}</small></dd></div>
+              <div><dt>Barra libre</dt><dd>{c.bar}<br /><small>{c.barNote}</small></dd></div>
             </dl>
             <Countdown />
           </section>
           <div className="night-cast">
             <img src="/tricumple/trio.png" alt="" className="night-cut" loading="eager" />
-            {[["manufferrari", "Manuch", "a"], ["giuli_mallemaci", "Giu", "b"], ["martintascione", "Tincho", "c"]].map(([h, n, k]) => (
+            {[["manufferari", "Manuch", "a"], ["giuli_mallemaci", "Giu", "b"], ["martintascione", "Tincho", "c"]].map(([h, n, k]) => (
               <a key={h} href={`https://instagram.com/${h}`} target="_blank" rel="noreferrer" aria-label={`Instagram de ${n}`} className={`night-tagig night-tagig-${k}`}>@{h}</a>
             ))}
             <div className="night-halftone" />
@@ -195,7 +180,6 @@ export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAUL
           </section>
         )}
         {mainPoster && !guest && <Playlist variant="poster" />}
-        {mainPoster && !guest && <CommunityPlaylist />}
         {mainPoster && !guest && <p className="night-admin"><Link to="/admin">admin</Link></p>}
       </div>
     </main>
@@ -233,7 +217,7 @@ function Countdown() {
 
 function Ticket({ guest }: { guest: Guest }) {
   const [copied, setCopied] = useState(false);
-  const link = invitationLink(guest.inviteCode);
+  const link = typeof window !== "undefined" ? `${window.location.origin}/i/${guest.inviteCode}` : "";
   const first = guest.fullName.split(" ")[0];
 
   async function share() {
@@ -266,22 +250,19 @@ function Ticket({ guest }: { guest: Guest }) {
 
 
 
-      <div className="animate-poster-enter rounded-[2rem] border border-paper/12 bg-card p-6 text-paper" style={{ animationDelay: ".25s" }}>
-        <div className="mb-5 flex items-start gap-3 rounded-2xl border border-destructive/45 bg-destructive/10 px-4 py-3">
+      <div className="animate-poster-enter rounded-[2rem] bg-lime p-6 text-ink" style={{ animationDelay: ".25s" }}>
+        <div className="mb-4 flex items-start gap-3 rounded-2xl border-2 border-destructive bg-destructive/10 px-4 py-3 text-destructive">
           <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-destructive text-sm font-black text-paper">!</span>
-          <p className="text-sm font-extrabold uppercase leading-snug tracking-wide">
-            <span className="mr-2 inline-block -translate-y-0.5 rounded-full bg-destructive px-2.5 py-1 text-[0.65rem] font-black text-paper">warning</span>
-            <span className="text-paper">¿venís solo? sumá a 1 o 2 amigos, pasales tu link.</span>
-          </p>
+          <p className="text-sm font-extrabold uppercase leading-snug tracking-wide">Warning: coming alone? You can invite 1 or 2 friends. Share your link.</p>
         </div>
-        <p className="font-hand text-2xl text-muted-foreground">tu link personal</p>
+        <p className="font-hand text-2xl">tu link personal</p>
         <h3 className="text-3xl font-extrabold leading-tight">Podés invitar a 1 o 2 amigos 🙌</h3>
-        <p className="mt-1 font-medium text-muted-foreground">Este link es solo tuyo: así sabemos que vienen de tu parte.</p>
-        <div className="mt-4 truncate rounded-2xl border border-paper/12 bg-ink px-3 py-3 font-mono text-xs">{link}</div>
-        <Button onClick={share}
-          className="mt-3 h-14 w-full rounded-full bg-paper text-lg font-extrabold text-ink transition active:scale-95">
+        <p className="mt-1 font-medium">Este link es solo tuyo: así sabemos que vienen de tu parte.</p>
+        <div className="mt-4 truncate rounded-2xl border-2 border-ink/20 bg-paper/60 px-4 py-3 font-mono text-sm">{link}</div>
+        <button onClick={share}
+          className="mt-3 h-14 w-full rounded-full bg-ink text-lg font-extrabold text-paper transition active:scale-95">
           {copied ? "¡Copiado! ✓" : "Compartir mi link"}
-        </Button>
+        </button>
       </div>
     </section>
   );
