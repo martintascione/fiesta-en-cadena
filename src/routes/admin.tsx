@@ -330,9 +330,9 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
   const ordered = [...guests].map((g) => ({ ...g, hostsResolved: sortedHosts(g.hostsResolved ?? []), hosts: g.hosts ?? [], extraNames: g.extraNames ?? [] })).sort((a, b) =>
     comboRank(a.hostsResolved) - comboRank(b.hostsResolved) || comboLabel(a.hostsResolved).localeCompare(comboLabel(b.hostsResolved)) || a.fullName.localeCompare(b.fullName, "es"),
   ).filter((g) => group === "all" ? true : group === "none" ? g.hostsResolved.length === 0 : g.hostsResolved.includes(group));
-  const counts = HOSTS.map((h) => ({ ...h, n: guests.filter((g) => g.hostsResolved.includes(h.key)).length }));
-  const common = guests.filter((g) => g.hostsResolved.length === 3).length;
-  const unassigned = guests.filter((g) => g.hostsResolved.length === 0).length;
+  const counts = HOSTS.map((h) => ({ ...h, n: guests.filter((g) => (g.hostsResolved ?? []).includes(h.key)).length }));
+  const common = guests.filter((g) => (g.hostsResolved ?? []).length === 3).length;
+  const unassigned = guests.filter((g) => (g.hostsResolved ?? []).length === 0).length;
   const toggle = (hs: Host[], h: Host) => hs.includes(h) ? hs.filter((x) => x !== h) : [...hs, h];
   const parseExtras = (v: string) => { const t = v.trim(); if (!t) return { extras: 0, extraNames: [] as string[] }; if (/^\+?\d+$/.test(t)) return { extras: Number(t.replace("+", "")), extraNames: [] as string[] }; const names = t.split(/[,;+]/).map((x) => x.trim()).filter(Boolean); return { extras: names.length, extraNames: names }; };
   async function patch(id: string, data: { fullName?: string; email?: string; notes?: string; manualBar?: boolean; hosts?: Host[]; extras?: number; extraNames?: string[]; confirmed?: boolean }) {
