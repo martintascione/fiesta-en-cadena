@@ -34,6 +34,7 @@ function Admin() {
   const [status, setStatus] = useState<"all" | "confirmed" | "pending">("all");
   const [tab, setTab] = useState<"guests" | "codes" | "songs" | "copy">("guests");
   const [copiedAll, setCopiedAll] = useState(false);
+  const [listText, setListText] = useState("");
   const [q, setQ] = useState("");
 
   if (!data.authorized) {
@@ -113,14 +114,25 @@ function Admin() {
           <button onClick={exportCsv} className="rounded-full border border-paper/20 px-3 py-1.5 font-semibold text-paper/80 hover:border-paper/50">Exportar CSV</button>
           <button onClick={async () => {
             const text = data.guests.map((g) => `${g.fullName}, ${g.placeholderEmail ? "" : g.email}, ${g.confirmed ? "confirmado" : "sin confirmar"}`).join("\n");
-            await navigator.clipboard.writeText(text);
-            setCopiedAll(true); setTimeout(() => setCopiedAll(false), 1800);
+            setListText(text);
+            try { await navigator.clipboard.writeText(text); setCopiedAll(true); setTimeout(() => setCopiedAll(false), 1800); } catch { /* sin permiso de portapapeles: queda el cuadro para copiar a mano */ }
           }} className="rounded-full border border-paper/20 px-3 py-1.5 font-semibold text-paper/80 hover:border-paper/50">{copiedAll ? "¡Copiado!" : "Copiar lista"}</button>
           <button onClick={() => router.invalidate()} className="rounded-full border border-paper/20 px-3 py-1.5 font-semibold text-paper/80 hover:border-paper/50">Actualizar</button>
           <button onClick={async () => { await logout(); router.invalidate(); }} className="rounded-full px-3 py-1.5 font-semibold text-muted-foreground hover:text-destructive">Salir</button>
         </div>
       </header>
 
+      {listText && (
+        <div className="mt-4 rounded-2xl border border-paper/10 bg-card p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-bold">Lista de invitados ({data.guests.length})</p>
+            <button onClick={() => setListText("")} className="text-xs text-muted-foreground underline">Cerrar</button>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">Si no se copió solo, tocá adentro del cuadro: se selecciona todo, y copiá con Cmd+C (o Ctrl+C).</p>
+          <textarea readOnly value={listText} rows={8} onFocus={(e) => e.target.select()} onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+            className="mt-2 w-full rounded-xl border border-paper/15 bg-ink px-3 py-2 font-mono text-xs text-paper outline-none focus:border-sun" />
+        </div>
+      )}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {stats.map(([l, n, sub, c]) => (
           <div key={l} className="rounded-2xl border border-paper/10 bg-card p-4">
