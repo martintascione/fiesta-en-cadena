@@ -11,7 +11,7 @@ export const Route = createFileRoute("/i/$code")({
     return {
       meta: [
         { title: t },
-        { name: "description", content: "Giu, Manuch y Tincho festejan juntos. Sáb 7/11 · 1:30 hs · Niceto Vega 5635. Confirmá y llevate tu QR." },
+        { name: "description", content: "Giu, Manuch y Tincho festejan juntos. Vie 6/11 · 1:30 hs · Niceto Vega 5635. Confirmá y llevate tu QR." },
         { property: "og:title", content: t },
         { property: "og:description", content: "Confirmá tu lugar y llevate tu QR de entrada." },
         { property: "og:type", content: "website" },
