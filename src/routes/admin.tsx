@@ -100,13 +100,13 @@ function Admin() {
   ];
 
   return (
-    <main className="mx-auto max-w-6xl px-5 py-8">
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-5 sm:py-8">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[.2em] text-muted-foreground">Tricumple · Panel</p>
           <h1 className="mt-1 text-4xl font-extrabold tracking-tight">Invitados</h1>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-sm">
+        <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
           <Link to="/" className="rounded-full border border-paper/20 px-3 py-1.5 font-semibold text-paper/80 hover:border-paper/50">Ver invitación</Link>
           <button onClick={exportCsv} className="rounded-full border border-paper/20 px-3 py-1.5 font-semibold text-paper/80 hover:border-paper/50">Exportar CSV</button>
           <button onClick={async () => {
@@ -135,11 +135,11 @@ function Admin() {
             className="mt-2 w-full rounded-xl border border-paper/15 bg-ink px-3 py-2 font-mono text-xs text-paper outline-none focus:border-sun" />
         </div>
       )}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
         {stats.map(([l, n, sub, c]) => (
           <div key={l} className="rounded-2xl border border-paper/10 bg-card p-4">
             <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{l}</p>
-            <p className={`mt-1 text-4xl font-extrabold leading-none tracking-tight ${c}`}>{n}</p>
+            <p className={`mt-1 text-3xl font-extrabold leading-none tracking-tight sm:text-4xl ${c}`}>{n}</p>
             <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
           </div>
         ))}
@@ -161,7 +161,7 @@ function Admin() {
             className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${filter === k ? "bg-lime text-ink" : "bg-card text-paper/70 hover:text-paper"}`}>{l}</button>
         ))}
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar nombre o email"
-          className="ml-auto h-9 w-full max-w-xs rounded-full border border-paper/15 bg-card px-4 text-sm outline-none placeholder:text-muted-foreground focus:border-sun" />
+          className="h-9 w-full rounded-full border border-paper/15 bg-card px-4 text-sm outline-none placeholder:text-muted-foreground focus:border-sun md:ml-auto md:max-w-xs" />
       </div>
       {!data.sheetReady && <p className="mt-4 rounded-2xl border-2 border-destructive bg-destructive/10 p-3 text-sm font-semibold text-destructive">La base todavía no tiene las columnas de la planilla (migración 0009). Hasta que Lovable la aplique, no se puede editar ni cargar invitados a mano. Si no se aplica sola, corré el SQL de la migración en Cloud → Database.</p>}
       <GuestSheet guests={shown} total={data.guests.length} onChange={() => router.invalidate()} />
@@ -472,6 +472,63 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
       </span>
     );
   };
+  const groupPill = (hs: Host[]) => (
+    <span className="inline-flex items-center gap-2 rounded-full bg-paper px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-ink">
+      <span className={`inline-block h-2.5 w-2.5 rounded-full ${hs.length === 1 ? hostColor[hs[0]!] : hs.length ? "bg-ink" : "bg-muted-foreground"}`} />
+      {hs.length ? `Invitados ${hs.length === 3 ? "en común" : "de " + comboLabel(hs)}` : "Sin asignar"}
+    </span>
+  );
+  const mobileGroupHeader = (g: GuestRow, prev: GuestRow | undefined) => (group === "all" && (!prev || comboLabel(prev.hostsResolved) !== comboLabel(g.hostsResolved))) ? <div className="pt-3">{groupPill(g.hostsResolved)}</div> : null;
+  const mobileCard = (g: GuestRow, kind: "registered" | "external", i: number) => {
+    const suggestion = kind === "external" ? registered.find((r) => norm(r.fullName) === norm(g.fullName)) : undefined;
+    return (
+      <div className={`rounded-2xl border bg-card p-4 ${kind === "external" ? "border-sun/20" : "border-paper/10"}`}>
+        <div className="flex items-start gap-2">
+          <span className="mt-2 text-[11px] text-muted-foreground">{i + 1}</span>
+          <div className="min-w-0 flex-1">
+            <Cell value={g.fullName} onSave={(v) => patch(g.id, { fullName: v })} className="text-base font-bold" />
+            {kind === "registered"
+              ? <Cell value={g.placeholderEmail ? "" : g.email} type="email" placeholder="sin email" onSave={(v) => patch(g.id, { email: v })} className="text-xs text-muted-foreground" />
+              : <Cell value={g.referrer} placeholder="quién lo invita" onSave={(v) => patch(g.id, { referrer: v })} className="text-xs text-muted-foreground" />}
+          </div>
+          <button onClick={async () => { if (confirm(`¿Borrar a ${g.fullName}?`)) { await remove({ data: { id: g.id } }); onChange(); } }} className="px-1 text-lg leading-none text-muted-foreground hover:text-destructive" aria-label="Borrar">×</button>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {hostsCell(g)}
+          <span className="ml-auto">{barCell(g)}</span>
+        </div>
+        {kind === "registered" && (
+          <p className="mt-2 text-xs text-muted-foreground">{g.invitedBy ? <span className="rounded-full bg-bubble/20 px-2 py-0.5 font-semibold text-bubble">link de {g.invitedBy}</span> : g.referrer ? <span>vía {g.referrer}</span> : <span className="opacity-60">link general</span>}{g.invitedCount ? <span className="ml-1">· invitó a {g.invitedCount}</span> : null}{g.discount ? <span className="ml-1">· {g.discount.code}</span> : null}</p>
+        )}
+        <div className="mt-2 grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1 text-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Acomp.</span>
+          <div>{extrasCell(g)}</div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Notas</span>
+          <Cell value={g.notes} placeholder="…" onSave={(v) => patch(g.id, { notes: v })} />
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-2">
+          {kind === "registered" ? (
+            <button onClick={async () => { await navigator.clipboard.writeText(link(g)); setCopied(g.id); setTimeout(() => setCopied(""), 1500); }} className="rounded-full border border-paper/30 px-3 py-1 text-[11px] font-bold uppercase">{copied === g.id ? "copiado" : `link ${g.shareCode}`}</button>
+          ) : linking === g.id ? (
+            <span className="flex w-full items-center gap-1">
+              <select defaultValue="" onChange={(e) => { if (e.target.value === "__confirm") patch(g.id, { confirmed: true }); else if (e.target.value) linkTo(g, e.target.value); }}
+                className="h-9 min-w-0 flex-1 rounded-full border border-input bg-card px-2 text-xs">
+                <option value="" disabled>¿Con quién de arriba?</option>
+                {registered.map((r) => <option key={r.id} value={r.id}>{r.fullName}</option>)}
+                <option value="__confirm">Marcar registrado sin vincular</option>
+              </select>
+              <button onClick={() => setLinking(null)} className="px-2 text-xs text-muted-foreground">✕</button>
+            </span>
+          ) : (
+            <button onClick={() => markRegistered(g)}
+              className={`inline-flex h-9 w-full items-center justify-center rounded-full px-3 text-[11px] font-extrabold uppercase transition active:scale-95 ${suggestion ? "bg-sun text-ink" : "border border-paper/30 text-paper/80"}`}>
+              {suggestion ? "↑ Está registrado arriba" : "Está registrado arriba"}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
   const groupHeader = (g: GuestRow, prev: GuestRow | undefined, cols: number) => {
     const label = comboLabel(g.hostsResolved);
     if (group !== "all" || (prev && comboLabel(prev.hostsResolved) === label)) return null;
@@ -497,11 +554,15 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
       {msg && <p className="mt-2 text-sm font-semibold text-sun">{msg}</p>}
 
       {/* ---------- Registrados en la web ---------- */}
-      <div className="mt-6 flex items-baseline justify-between">
+      <div className="mt-6 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
         <h2 className="text-lg font-bold">Registrados en la web <span className="text-muted-foreground">{registered.length}</span></h2>
         <p className="text-xs text-muted-foreground">Se anotaron con nombre y email en la invitación</p>
       </div>
-      <div className="mt-2 overflow-x-auto rounded-2xl border border-paper/10 bg-card">
+      <div className="mt-2 space-y-2 md:hidden">
+        {registered.map((g, i) => <Fragment key={g.id}>{mobileGroupHeader(g, registered[i - 1])}{mobileCard(g, "registered", i)}</Fragment>)}
+        {registered.length === 0 && <p className="px-1 py-3 text-sm text-muted-foreground">{total === 0 ? "Todavía no se anotó nadie." : "Nada que coincida con el filtro."}</p>}
+      </div>
+      <div className="mt-2 hidden overflow-x-auto rounded-2xl border border-paper/10 bg-card md:block">
         <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
           <thead className={thead}>
             <tr>
@@ -564,7 +625,19 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
           <button onClick={addBulk} className="mt-2 h-10 rounded-full bg-primary px-5 text-sm font-extrabold text-primary-foreground">Agregar todos</button>
         </div>
       )}
-      <div className="mt-3 overflow-x-auto rounded-2xl border border-sun/20 bg-card">
+      <div className="mt-3 space-y-2 md:hidden">
+        {external.map((g, i) => <Fragment key={g.id}>{mobileGroupHeader(g, external[i - 1])}{mobileCard(g, "external", i)}</Fragment>)}
+        <form onSubmit={addOne} className="rounded-2xl border border-dashed border-sun/40 bg-card p-4">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-sun">Agregar externo</p>
+          <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nombre y apellido" className="mt-2 h-10 w-full rounded-xl border border-input bg-transparent px-3 text-sm outline-none focus:border-ring" />
+          <input value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="Quién lo invita (opcional)" className="mt-2 h-10 w-full rounded-xl border border-input bg-transparent px-3 text-sm outline-none focus:border-ring" />
+          <div className="mt-2 flex items-center gap-1">
+            {HOSTS.map((h) => <button key={h.key} type="button" onClick={() => setNewHosts(toggle(newHosts, h.key))} className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${newHosts.includes(h.key) ? `${hostColor[h.key]} text-ink` : "border border-paper/20 text-muted-foreground"}`}>{h.label}</button>)}
+            <button className="ml-auto h-9 rounded-full bg-sun px-4 text-xs font-extrabold text-ink">Agregar</button>
+          </div>
+        </form>
+      </div>
+      <div className="mt-3 hidden overflow-x-auto rounded-2xl border border-sun/20 bg-card md:block">
         <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
           <thead className={thead}>
             <tr>
