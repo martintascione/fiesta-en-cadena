@@ -43,7 +43,7 @@ export const DEFAULT_COPY: Copy = {
   barNote: "toda la noche",
   formTitle: "Confirmá tu lugar.",
   formSub: "Solo tu nombre y email. Nada más.",
-  counterBase: "120",
+  counterBase: "92",
   counterLimit: "160",
   counterLine: "Ya somos",
   counterSub: "Sos el #{next}. Quedan pocos lugares.",
