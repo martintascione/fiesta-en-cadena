@@ -102,7 +102,7 @@ export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAUL
               <div><dt>Barra libre</dt><dd>{c.bar}<small>{c.barNote}</small></dd></div>
             </dl>
             <Countdown />
-            <Counter total={(parseInt(c.counterBase, 10) || 0) + confirmedCount} limit={parseInt(c.counterLimit, 10) || 0} line={c.counterLine} sub={c.counterSub} />
+            <Counter total={(parseInt(c.counterBase, 10) || 0) + confirmedCount} limit={parseInt(c.counterLimit, 10) || 0} line={c.counterLine} sub={c.counterSub} copy={c} />
           </section>
           <div className="night-cast">
             <img src="/tricumple/trio.png" alt="" className="night-cut" loading="eager" />
@@ -205,7 +205,7 @@ export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAUL
 
 const PARTY_AT = new Date("2026-11-07T01:30:00-03:00").getTime();
 
-function Counter({ total, limit, line, sub }: { total: number; limit: number; line: string; sub: string }) {
+function Counter({ total, limit, line, sub, copy: c }: { total: number; limit: number; line: string; sub: string; copy: Copy }) {
   const [n, setN] = useState(0);
   useEffect(() => {
     let raf = 0; const start = performance.now(); const dur = 1600;
@@ -220,7 +220,8 @@ function Counter({ total, limit, line, sub }: { total: number; limit: number; li
   return (
     <section className="night-counter" aria-live="polite">
       <div className="night-counter-head">
-        <span className="night-live" aria-hidden /><span className="night-counter-kicker">Tricumple · 6/11</span>
+        <span className="night-counter-title">Tri<svg aria-hidden viewBox="0 0 100 100"><path d="M50 0 L58 40 L100 50 L58 60 L50 100 L42 60 L0 50 L42 40 Z" /></svg>cumple</span>
+        <span className="night-counter-hosts">{c.hosts}</span>
       </div>
       <p className="night-counter-line">{fmt(line)}</p>
       <p className="night-counter-num"><span>{n}</span><small>confirmados</small></p>
@@ -229,7 +230,13 @@ function Counter({ total, limit, line, sub }: { total: number; limit: number; li
           <span style={{ width: `${pct}%` }} />
         </div>
       )}
-      {sub && <p className="night-counter-sub">{fmt(sub)}</p>}
+      {sub && <p className="night-counter-sub"><span className="night-live" aria-hidden />{fmt(sub)}</p>}
+      <dl className="night-counter-info">
+        <div><dt>Cuándo</dt><dd>Viernes 6/11<br /><small>desde la 1:30 hs</small></dd></div>
+        <div><dt>Dónde</dt><dd>{c.where}<br /><small>{c.whereNote}</small></dd></div>
+        <div><dt>Barra libre</dt><dd>{c.bar}<br /><small>{c.barNote}</small></dd></div>
+      </dl>
+      <p className="night-counter-foot">{c.tag3} · Anotate con tu nombre y email</p>
     </section>
   );
 }
