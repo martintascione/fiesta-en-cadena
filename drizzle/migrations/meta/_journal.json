@@ -85,6 +85,13 @@
       "when": 1793222709583,
       "tag": "0011_add_guest_extra_names_and_confirmed_at",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793225134217,
+      "tag": "0012_guest_referrer",
+      "breakpoints": true
     }
   ]
 }

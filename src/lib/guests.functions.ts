@@ -146,9 +146,9 @@ async function isAdmin() {
 export const adminList = createServerFn({ method: "GET" }).handler(async () => {
   if (!(await isAdmin())) return { authorized: false as const, sheetReady: false, guests: [] };
   const db = await admin();
-  const full = await db.from("guests").select("id, full_name, email, invited_by, created_at, receipt_path, discount_code_id, notes, manual_bar, added_by_admin, share_code, invite_code, hosts, extras, extra_names, confirmed_at").order("created_at");
+  const full = await db.from("guests").select("id, full_name, email, invited_by, created_at, receipt_path, discount_code_id, notes, manual_bar, added_by_admin, share_code, invite_code, hosts, extras, extra_names, confirmed_at, referrer_name").order("created_at");
   let sheetReady = !full.error;
-  let rows = (full.data ?? []) as Array<{ id: string; full_name: string; email: string; invited_by: string | null; created_at: string; receipt_path: string | null; discount_code_id: string | null; notes?: string | null; manual_bar?: boolean; added_by_admin?: boolean; share_code?: string | null; invite_code: string; hosts?: string[] | null; extras?: number | null; extra_names?: string[] | null; confirmed_at?: string | null }>;
+  let rows = (full.data ?? []) as Array<{ id: string; full_name: string; email: string; invited_by: string | null; created_at: string; receipt_path: string | null; discount_code_id: string | null; notes?: string | null; manual_bar?: boolean; added_by_admin?: boolean; share_code?: string | null; invite_code: string; hosts?: string[] | null; extras?: number | null; extra_names?: string[] | null; confirmed_at?: string | null; referrer_name?: string | null }>;
   if (full.error) {
     // Las columnas de la planilla todavía no existen (migración 0009 sin aplicar): mostrar igual la lista.
     const basic = await db.from("guests").select("id, full_name, email, invited_by, created_at, receipt_path, discount_code_id, share_code, invite_code").order("created_at");
@@ -193,6 +193,7 @@ export const adminList = createServerFn({ method: "GET" }).handler(async () => {
       extras: r.extras ?? 0,
       extraNames: r.extra_names ?? [],
       confirmed: r.confirmed_at ? true : !r.added_by_admin,
+      referrer: r.referrer_name ?? "",
     })),
   };
 });
@@ -206,7 +207,7 @@ const nameSchema = z.string().trim().min(2).max(100);
 
 export const adminAddGuests = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({
-    rows: z.array(z.object({ fullName: nameSchema, email: z.string().trim().max(255).optional(), extras: z.number().int().min(0).max(20).optional(), extraNames: z.array(z.string().trim().max(80)).max(20).optional(), notes: z.string().trim().max(300).optional(), manualBar: z.boolean().optional() })).min(1).max(300),
+    rows: z.array(z.object({ fullName: nameSchema, email: z.string().trim().max(255).optional(), extras: z.number().int().min(0).max(20).optional(), extraNames: z.array(z.string().trim().max(80)).max(20).optional(), notes: z.string().trim().max(300).optional(), manualBar: z.boolean().optional(), referrer: z.string().trim().max(100).optional() })).min(1).max(300),
     hosts: hostsSchema.optional(),
   }).parse(d))
   .handler(async ({ data }) => {
@@ -228,7 +229,7 @@ export const adminAddGuests = createServerFn({ method: "POST" })
       } else {
         email = `${code(10)}@sin-email.tricumple`;
       }
-      const { error } = await db.from("guests").insert({ full_name: r.fullName, email, invite_code: code(7), qr_token: code(16), added_by_admin: true, hosts: data.hosts ?? [], extras: Math.max(r.extras ?? 0, (r.extraNames ?? []).length), extra_names: r.extraNames ?? [], notes: r.notes || null, manual_bar: !!r.manualBar });
+      const { error } = await db.from("guests").insert({ full_name: r.fullName, email, invite_code: code(7), qr_token: code(16), added_by_admin: true, hosts: data.hosts ?? [], extras: Math.max(r.extras ?? 0, (r.extraNames ?? []).length), extra_names: r.extraNames ?? [], notes: r.notes || null, manual_bar: !!r.manualBar, referrer_name: r.referrer || null });
       if (error) skipped.push(error.code === "23505" ? `${r.fullName} (ya estaba)` : `${r.fullName}`); else added++;
     }
     return { ok: true, added, skipped, reason: null };
@@ -245,11 +246,13 @@ export const adminUpdateGuest = createServerFn({ method: "POST" })
     extras: z.number().int().min(0).max(20).optional(),
     extraNames: z.array(z.string().trim().max(80)).max(20).optional(),
     confirmed: z.boolean().optional(),
+    referrer: z.string().trim().max(100).optional(),
   }).parse(d))
   .handler(async ({ data }) => {
     if (!(await isAdmin())) return { ok: false, reason: "No autorizado" };
     const db = await admin();
-    const patch: { full_name?: string; email?: string; notes?: string | null; manual_bar?: boolean; hosts?: Host[]; extras?: number; extra_names?: string[]; confirmed_at?: string | null } = {};
+    const patch: { full_name?: string; email?: string; notes?: string | null; manual_bar?: boolean; hosts?: Host[]; extras?: number; extra_names?: string[]; confirmed_at?: string | null; referrer_name?: string | null } = {};
+    if (data.referrer !== undefined) patch.referrer_name = data.referrer || null;
     if (data.hosts !== undefined) patch.hosts = [...new Set(data.hosts)];
     if (data.extras !== undefined) patch.extras = data.extras;
     if (data.extraNames !== undefined) { patch.extra_names = data.extraNames.filter(Boolean); patch.extras = Math.max(data.extras ?? 0, patch.extra_names.length); }
@@ -264,6 +267,35 @@ export const adminUpdateGuest = createServerFn({ method: "POST" })
     const { error } = await db.from("guests").update(patch).eq("id", data.id);
     if (error) return { ok: false, reason: error.code === "23505" ? "Ese email ya está en otro invitado" : "No se pudo guardar" };
     return { ok: true, reason: null };
+  });
+
+/** Vincula un invitado externo (cargado a mano) con uno registrado en la web: pasa sus datos y borra la fila externa. */
+export const adminMergeGuest = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ externalId: z.string().uuid(), targetId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    if (!(await isAdmin())) return { ok: false, reason: "No autorizado" };
+    if (data.externalId === data.targetId) return { ok: false, reason: "Es el mismo invitado" };
+    const db = await admin();
+    const [{ data: ext }, { data: tgt }] = await Promise.all([
+      db.from("guests").select("*").eq("id", data.externalId).maybeSingle(),
+      db.from("guests").select("*").eq("id", data.targetId).maybeSingle(),
+    ]);
+    if (!ext || !tgt) return { ok: false, reason: "Invitado no encontrado" };
+    const patch: { hosts?: string[]; extras?: number; extra_names?: string[]; referrer_name?: string | null; manual_bar?: boolean; notes?: string | null; confirmed_at?: string | null } = {};
+    if (!(tgt.hosts ?? []).length && (ext.hosts ?? []).length) patch.hosts = ext.hosts;
+    if (!(tgt.extras ?? 0) && (ext.extras ?? 0)) { patch.extras = ext.extras; patch.extra_names = ext.extra_names ?? []; }
+    if (!tgt.referrer_name && ext.referrer_name) patch.referrer_name = ext.referrer_name;
+    if (ext.manual_bar && !tgt.manual_bar && !tgt.receipt_path) patch.manual_bar = true;
+    if (ext.notes) patch.notes = [tgt.notes, ext.notes].filter(Boolean).join(" · ");
+    if (!tgt.confirmed_at) patch.confirmed_at = new Date().toISOString();
+    if (Object.keys(patch).length) {
+      const { error } = await db.from("guests").update(patch).eq("id", tgt.id);
+      if (error) return { ok: false, reason: "No se pudo vincular" };
+    }
+    // Si alguien se anotó con el link del externo, pasa a colgar del registrado.
+    await db.from("guests").update({ invited_by: tgt.id }).eq("invited_by", ext.id);
+    const { error } = await db.from("guests").delete().eq("id", ext.id);
+    return { ok: !error, reason: error ? "No se pudo borrar la fila externa" : null };
   });
 
 export const adminDeleteGuest = createServerFn({ method: "POST" })

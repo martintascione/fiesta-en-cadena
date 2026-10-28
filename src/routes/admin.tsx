@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Fragment, useEffect, useRef, useState } from "react";
-import { adminList, adminLogin, adminLogout, adminSongs, adminRemoveSong, adminCodes, createCode, updateCode, getCopy, saveCopy, adminAddGuests, adminUpdateGuest, adminDeleteGuest, HOSTS, type Host } from "@/lib/guests.functions";
+import { adminList, adminLogin, adminLogout, adminSongs, adminRemoveSong, adminCodes, createCode, updateCode, getCopy, saveCopy, adminAddGuests, adminUpdateGuest, adminDeleteGuest, adminMergeGuest, HOSTS, type Host } from "@/lib/guests.functions";
 import { Trash2, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { COPY_FIELDS, type Copy } from "@/lib/copy";
@@ -31,7 +31,6 @@ function Admin() {
   const [err, setErr] = useState("");
   const [entering, setEntering] = useState(false);
   const [filter, setFilter] = useState<"all" | "paid" | "unpaid">("all");
-  const [status, setStatus] = useState<"all" | "confirmed" | "pending">("all");
   const [tab, setTab] = useState<"guests" | "codes" | "songs" | "copy">("guests");
   const [copiedAll, setCopiedAll] = useState(false);
   const [listText, setListText] = useState("");
@@ -79,8 +78,6 @@ function Admin() {
     const hasBar = !!g.receiptUrl || g.discount?.kind === "free" || g.manualBar;
     if (filter === "paid" && !hasBar) return false;
     if (filter === "unpaid" && hasBar) return false;
-    if (status === "confirmed" && !g.confirmed) return false;
-    if (status === "pending" && g.confirmed) return false;
     const t = q.trim().toLowerCase();
     return !t || g.fullName.toLowerCase().includes(t) || g.email.toLowerCase().includes(t);
   });
@@ -97,8 +94,8 @@ function Admin() {
   const conf = data.guests.filter((g) => g.confirmed).length;
   const stats: [string, string | number, string, string][] = [
     ["Invitados", data.guests.length, extras ? `+${extras} acompañantes` : "sin acompañantes", "text-sky"],
-    ["Confirmados", conf, `${data.guests.length ? Math.round((conf / data.guests.length) * 100) : 0}% del total`, "text-paper"],
-    ["Sin confirmar", data.guests.length - conf, "cargados a mano", "text-sun"],
+    ["Registrados", conf, `${data.guests.length ? Math.round((conf / data.guests.length) * 100) : 0}% del total`, "text-paper"],
+    ["Externos", data.guests.length - conf, "sin registrarse en la web", "text-sun"],
     ["Barra libre", paid, `$${(paid * 17500).toLocaleString("es-AR")} recaudados`, "text-lime"],
   ];
 
@@ -154,11 +151,6 @@ function Admin() {
       {tab === "codes" && <Codes codes={data.codes ?? []} onChange={() => router.invalidate()} />}
       {tab === "guests" && <>
       <div className="mt-6 flex flex-wrap items-center gap-2">
-        {([["all", "Todos"], ["confirmed", "Confirmados"], ["pending", "Sin confirmar"]] as const).map(([k, l]) => (
-          <button key={k} onClick={() => setStatus(k)}
-            className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${status === k ? "bg-sun text-ink" : "bg-card text-paper/70 hover:text-paper"}`}>{l}</button>
-        ))}
-        <span className="mx-1 h-5 w-px bg-paper/15" />
         {([["all", "Todas"], ["paid", "Con barra libre"], ["unpaid", "Sin barra libre"]] as const).map(([k, l]) => (
           <button key={k} onClick={() => setFilter(k)}
             className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${filter === k ? "bg-lime text-ink" : "bg-card text-paper/70 hover:text-paper"}`}>{l}</button>
@@ -311,7 +303,7 @@ function Codes({ codes, onChange }: { codes: CodeRow[]; onChange: () => void }) 
   );
 }
 
-type GuestRow = { id: string; fullName: string; email: string; placeholderEmail: boolean; invitedBy: string | null; invitedCount: number; createdAt: string; receiptUrl: string | null; discount: { code: string; kind: "free" | "percent"; value: number } | null; notes: string; manualBar: boolean; addedByAdmin: boolean; shareCode: string; hosts: Host[]; hostsResolved: Host[]; extras: number; extraNames: string[]; confirmed: boolean };
+type GuestRow = { id: string; fullName: string; email: string; placeholderEmail: boolean; invitedBy: string | null; invitedCount: number; createdAt: string; receiptUrl: string | null; discount: { code: string; kind: "free" | "percent"; value: number } | null; notes: string; manualBar: boolean; addedByAdmin: boolean; shareCode: string; hosts: Host[]; hostsResolved: Host[]; extras: number; extraNames: string[]; confirmed: boolean; referrer: string };
 
 function Cell({ value, onSave, placeholder, type = "text", className = "" }: { value: string; onSave: (v: string) => Promise<void>; placeholder?: string; type?: string; className?: string }) {
   const [v, setV] = useState(value);
@@ -353,7 +345,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
   const unassigned = guests.filter((g) => (g.hostsResolved ?? []).length === 0).length;
   const toggle = (hs: Host[], h: Host) => hs.includes(h) ? hs.filter((x) => x !== h) : [...hs, h];
   const parseExtras = (v: string) => { const t = v.trim(); if (!t) return { extras: 0, extraNames: [] as string[] }; if (/^\+?\d+$/.test(t)) return { extras: Number(t.replace("+", "")), extraNames: [] as string[] }; const names = t.split(/[,;+]/).map((x) => x.trim()).filter(Boolean); return { extras: names.length, extraNames: names }; };
-  async function patch(id: string, data: { fullName?: string; email?: string; notes?: string; manualBar?: boolean; hosts?: Host[]; extras?: number; extraNames?: string[]; confirmed?: boolean }) {
+  async function patch(id: string, data: { fullName?: string; email?: string; notes?: string; manualBar?: boolean; hosts?: Host[]; extras?: number; extraNames?: string[]; confirmed?: boolean; referrer?: string }) {
     setMsg("");
     // Optimista: se refleja al instante y recién después se guarda; no recarga todo el panel.
     setGuests((gs) => gs.map((g) => g.id !== id ? g : {
@@ -366,6 +358,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
       ...(data.extras !== undefined ? { extras: data.extras } : {}),
       ...(data.extraNames !== undefined ? { extraNames: data.extraNames, extras: Math.max(data.extras ?? 0, data.extraNames.length) } : {}),
       ...(data.confirmed !== undefined ? { confirmed: data.confirmed } : {}),
+      ...(data.referrer !== undefined ? { referrer: data.referrer } : {}),
     }));
     try {
       const r = await update({ data: { id, ...data } });
@@ -375,7 +368,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
   async function addOne(e: React.FormEvent) {
     e.preventDefault(); setMsg("");
     if (newName.trim().length < 2) return;
-    const r = await add({ data: { rows: [{ fullName: newName.trim(), email: newEmail.trim() || undefined }], hosts: newHosts } });
+    const r = await add({ data: { rows: [{ fullName: newName.trim(), referrer: newEmail.trim() || undefined }], hosts: newHosts } });
     if (r.skipped.length) setMsg(`No se agregó: ${r.skipped.join(", ")}`);
     setNewName(""); setNewEmail(""); onChange();
   }
@@ -389,7 +382,10 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
       const pago = parts.find((x) => /^(si|sí|no)$/i.test(x));
       const notes = parts.filter((x) => x !== email && x !== extrasRaw && x !== pago).join(" · ");
       const ex = extrasRaw ? (/^\+\d+$/.test(extrasRaw) ? { extras: Number(extrasRaw.slice(1)), extraNames: [] as string[] } : (() => { const names = extrasRaw.replace(/^\+\s*/, "").split(/\s*\+\s*/).map((x) => x.trim()).filter(Boolean); return { extras: names.length, extraNames: names }; })()) : { extras: 0, extraNames: [] as string[] };
-      return { fullName, email, ...ex, manualBar: !!pago && /^s/i.test(pago), notes: [notes, pago && /^no$/i.test(pago) ? "no paga" : ""].filter(Boolean).join(" · ") || undefined };
+      const viaMatch = notes.match(/(?:^|· )v[ií]a\s+([^·]+)/i);
+      const referrer = viaMatch?.[1]?.trim();
+      const cleanNotes = notes.replace(/(?:^|· )v[ií]a\s+[^·]+/i, "").replace(/^ · /, "").trim();
+      return { fullName, email, ...ex, referrer, manualBar: !!pago && /^s/i.test(pago), notes: [cleanNotes, pago && /^no$/i.test(pago) ? "no paga" : ""].filter(Boolean).join(" · ") || undefined };
     }).filter((r) => r.fullName.length >= 2);
     if (!rows.length) return setMsg("No encontré nombres en el texto");
     const r = await add({ data: { rows, hosts: newHosts } });
@@ -397,6 +393,55 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
     setBulkText(""); setBulk(false); onChange();
   }
   const link = (g: GuestRow) => `${window.location.origin}/i/${g.shareCode}`;
+
+  const merge = useServerFn(adminMergeGuest);
+  const [linking, setLinking] = useState<string | null>(null);
+  const norm = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+  const registered = ordered.filter((g) => g.confirmed);
+  const external = ordered.filter((g) => !g.confirmed);
+  async function linkTo(ext: GuestRow, targetId: string) {
+    setMsg("");
+    const r = await merge({ data: { externalId: ext.id, targetId } });
+    if (!r.ok) setMsg(r.reason ?? "No se pudo vincular");
+    setLinking(null); onChange();
+  }
+  async function markRegistered(ext: GuestRow) {
+    const match = registered.find((g) => norm(g.fullName) === norm(ext.fullName));
+    if (match) return linkTo(ext, match.id);
+    setLinking(ext.id);
+  }
+  const barCell = (g: GuestRow) => g.receiptUrl ? (
+    <a href={g.receiptUrl} target="_blank" rel="noreferrer" title="Pagó: ver comprobante" className="inline-flex h-8 items-center gap-1 rounded-full bg-lime px-3 text-[11px] font-extrabold uppercase text-ink">✓ Pagó <span className="font-normal normal-case opacity-70">ver</span></a>
+  ) : g.discount?.kind === "free" ? (
+    <span title={`Código ${g.discount.code}`} className="inline-flex h-8 items-center rounded-full bg-lime px-3 text-[11px] font-extrabold uppercase text-ink">✓ Gratis</span>
+  ) : (
+    <button type="button" onClick={() => patch(g.id, { manualBar: !g.manualBar })} title={g.manualBar ? "Marcado como pagado a mano. Clic para desmarcar" : "Clic para marcar como pagado (efectivo, etc.)"}
+      className={`inline-flex h-8 items-center gap-1 rounded-full px-3 text-[11px] font-extrabold uppercase transition active:scale-95 ${g.manualBar ? "bg-lime text-ink" : "border-2 border-dashed border-paper/40 text-paper/60 hover:border-sun hover:text-sun"}`}>
+      {g.manualBar ? "✓ Pagó" : "○ Falta"}
+    </button>
+  );
+  const hostsCell = (g: GuestRow) => {
+    const inherited = !g.hosts.length && g.hostsResolved.length > 0;
+    return (
+      <span className="flex gap-1" title={inherited ? `Heredado de ${g.invitedBy}` : ""}>
+        {HOSTS.map((h) => {
+          const on = g.hostsResolved.includes(h.key);
+          return <button key={h.key} type="button" onClick={() => patch(g.id, { hosts: toggle(g.hostsResolved, h.key) })}
+            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${on ? `${hostColor[h.key]} text-ink` : "border border-paper/20 text-muted-foreground"} ${on && inherited ? "opacity-60" : ""}`}>{h.label[0]}</button>;
+        })}
+      </span>
+    );
+  };
+  const groupHeader = (g: GuestRow, prev: GuestRow | undefined, cols: number) => {
+    const label = comboLabel(g.hostsResolved);
+    if (group !== "all" || (prev && comboLabel(prev.hostsResolved) === label)) return null;
+    return (
+      <tr className="border-t border-paper/10">
+        <td colSpan={cols} className="bg-muted/20 px-3 py-2"><span className="inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider"><span className={`inline-block h-2.5 w-2.5 rounded-full ${g.hostsResolved.length === 1 ? hostColor[g.hostsResolved[0]!] : g.hostsResolved.length ? "bg-paper" : "bg-muted-foreground"}`} />{g.hostsResolved.length ? `Invitados ${g.hostsResolved.length === 3 ? "en común" : "de " + label}` : "Sin asignar"}</span></td>
+      </tr>
+    );
+  };
+  const thead = "sticky top-0 z-10 bg-card text-[11px] uppercase tracking-wider text-muted-foreground";
 
   return (
     <section className="mt-5">
@@ -408,7 +453,60 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
         ))}
         <button onClick={() => setGroup("none")} className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${group === "none" ? "bg-paper text-ink" : "bg-card text-paper/70 hover:text-paper"}`}>Sin asignar <span className="opacity-60">{unassigned}</span></button>
         <span className="text-xs text-muted-foreground">· en común {common}</span>
-        <button onClick={() => setBulk(!bulk)} className={`ml-auto rounded-full px-3 py-1.5 text-xs font-bold transition ${bulk ? "bg-paper text-ink" : "border border-paper/20 text-paper/80 hover:border-paper/50"}`}>{bulk ? "Cerrar" : "Pegar lista"}</button>
+      </div>
+      {msg && <p className="mt-2 text-sm font-semibold text-sun">{msg}</p>}
+
+      {/* ---------- Registrados en la web ---------- */}
+      <div className="mt-6 flex items-baseline justify-between">
+        <h2 className="text-lg font-bold">Registrados en la web <span className="text-muted-foreground">{registered.length}</span></h2>
+        <p className="text-xs text-muted-foreground">Se anotaron con nombre y email en la invitación</p>
+      </div>
+      <div className="mt-2 overflow-x-auto rounded-2xl border border-paper/10 bg-card">
+        <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
+          <thead className={thead}>
+            <tr>
+              <th className="w-8 px-2 py-2">#</th>
+              <th className="px-2 py-2">Nombre</th>
+              <th className="px-2 py-2">Email</th>
+              <th className="w-28 px-2 py-2">Invitado de</th>
+              <th className="px-2 py-2">Vino por</th>
+              <th className="w-40 px-2 py-2">Acompañantes</th>
+              <th className="w-28 px-2 py-2 text-center">Barra libre</th>
+              <th className="px-2 py-2">Notas</th>
+              <th className="w-24 px-2 py-2">Link</th>
+              <th className="w-10 px-2 py-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {registered.map((g, i) => (
+              <Fragment key={g.id}>
+                {groupHeader(g, registered[i - 1], 10)}
+                <tr className="border-t border-paper/5 transition hover:bg-paper/[.03]">
+                  <td className="px-2 py-1 text-xs text-muted-foreground">{i + 1}</td>
+                  <td className="px-1 py-1"><Cell value={g.fullName} onSave={(v) => patch(g.id, { fullName: v })} className="font-semibold" /></td>
+                  <td className="px-1 py-1"><Cell value={g.placeholderEmail ? "" : g.email} type="email" placeholder="sin email" onSave={(v) => patch(g.id, { email: v })} /></td>
+                  <td className="px-1 py-1">{hostsCell(g)}</td>
+                  <td className="px-2 py-1 text-xs text-muted-foreground">{g.invitedBy ? <span className="rounded-full bg-bubble/20 px-2 py-0.5 font-semibold text-bubble">link de {g.invitedBy}</span> : g.referrer ? <span>vía {g.referrer}</span> : <span className="opacity-60">link general</span>}{g.invitedCount ? <span className="ml-1">· invitó a {g.invitedCount}</span> : null}{g.discount ? <span className="ml-1">· {g.discount.code}</span> : null}</td>
+                  <td className="px-1 py-1"><Cell value={g.extraNames.length ? g.extraNames.join(", ") : g.extras ? `+${g.extras}` : ""} placeholder="+2 o nombres" onSave={(v) => patch(g.id, parseExtras(v))} /></td>
+                  <td className="px-2 py-1 text-center">{barCell(g)}</td>
+                  <td className="px-1 py-1"><Cell value={g.notes} placeholder="…" onSave={(v) => patch(g.id, { notes: v })} /></td>
+                  <td className="px-2 py-1"><button onClick={async () => { await navigator.clipboard.writeText(link(g)); setCopied(g.id); setTimeout(() => setCopied(""), 1500); }} className="rounded-full border border-paper/30 px-2 py-0.5 text-[10px] font-bold uppercase">{copied === g.id ? "copiado" : g.shareCode}</button></td>
+                  <td className="px-2 py-1 text-right"><button onClick={async () => { if (confirm(`¿Borrar a ${g.fullName}?`)) { await remove({ data: { id: g.id } }); onChange(); } }} className="text-muted-foreground hover:text-destructive" aria-label="Borrar">×</button></td>
+                </tr>
+              </Fragment>
+            ))}
+            {registered.length === 0 && <tr><td colSpan={10} className="px-3 py-4 text-muted-foreground">{total === 0 ? "Todavía no se anotó nadie." : "Nada que coincida con el filtro."}</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ---------- Invitados externos ---------- */}
+      <div className="mt-10 flex flex-wrap items-center gap-2">
+        <div className="mr-auto">
+          <h2 className="text-lg font-bold">Invitados externos <span className="text-muted-foreground">{external.length}</span></h2>
+          <p className="text-xs text-muted-foreground">Lista paralela (Excel, cargados a mano). Todavía no se registraron en la web.</p>
+        </div>
+        <button onClick={() => setBulk(!bulk)} className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${bulk ? "bg-paper text-ink" : "border border-paper/20 text-paper/80 hover:border-paper/50"}`}>{bulk ? "Cerrar" : "Pegar lista"}</button>
       </div>
       {bulk && (
         <div className="mt-3 rounded-2xl border border-paper/10 bg-card p-4">
@@ -423,87 +521,68 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
           <button onClick={addBulk} className="mt-2 h-10 rounded-full bg-primary px-5 text-sm font-extrabold text-primary-foreground">Agregar todos</button>
         </div>
       )}
-      {msg && <p className="mt-2 text-sm font-semibold text-sun">{msg}</p>}
-      <div className="mt-3 overflow-x-auto rounded-2xl border border-paper/10 bg-card">
-        <table className="w-full min-w-[1180px] border-collapse text-left text-sm">
-          <thead className="sticky top-0 z-10 bg-card text-[11px] uppercase tracking-wider text-muted-foreground">
+      <div className="mt-3 overflow-x-auto rounded-2xl border border-sun/20 bg-card">
+        <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
+          <thead className={thead}>
             <tr>
               <th className="w-8 px-2 py-2">#</th>
-              <th className="w-8 px-2 py-2" title="Confirmado">✓</th>
               <th className="px-2 py-2">Nombre</th>
-              <th className="px-2 py-2">Email</th>
-              <th className="w-36 px-2 py-2">Invitado de</th>
+              <th className="w-28 px-2 py-2">Invitado de</th>
+              <th className="w-40 px-2 py-2">Lo invita</th>
               <th className="w-40 px-2 py-2">Acompañantes</th>
               <th className="w-28 px-2 py-2 text-center">Barra libre</th>
-              <th className="px-2 py-2">Invitado por</th>
               <th className="px-2 py-2">Notas</th>
-              <th className="w-24 px-2 py-2">Link</th>
+              <th className="w-44 px-2 py-2 text-right">Registro</th>
               <th className="w-10 px-2 py-2"></th>
             </tr>
           </thead>
           <tbody>
-            {ordered.map((g, i) => {
-              const bar = g.receiptUrl ? "comprobante" : g.discount?.kind === "free" ? "código" : g.manualBar ? "manual" : "";
-              const prev = ordered[i - 1];
-              const label = comboLabel(g.hostsResolved);
-              const newGroup = group === "all" && (!prev || comboLabel(prev.hostsResolved) !== label);
-              const inherited = !g.hosts.length && g.hostsResolved.length > 0;
-              return (<Fragment key={g.id}>
-                {newGroup && (
-                  <tr className="border-t border-paper/10">
-                    <td colSpan={11} className="bg-muted/20 px-3 py-2"><span className={`inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider`}><span className={`inline-block h-2.5 w-2.5 rounded-full ${g.hostsResolved.length === 1 ? hostColor[g.hostsResolved[0]!] : g.hostsResolved.length ? "bg-paper" : "bg-muted-foreground"}`} />{g.hostsResolved.length ? `Invitados ${g.hostsResolved.length === 3 ? "en común" : "de " + label}` : "Sin asignar"}</span></td>
-                  </tr>
-                )}
+            {external.map((g, i) => {
+              const suggestion = registered.find((r) => norm(r.fullName) === norm(g.fullName));
+              return (
+              <Fragment key={g.id}>
+                {groupHeader(g, external[i - 1], 9)}
                 <tr className="border-t border-paper/5 transition hover:bg-paper/[.03]">
                   <td className="px-2 py-1 text-xs text-muted-foreground">{i + 1}</td>
-                  <td className="px-1 py-1 text-center"><input type="checkbox" checked={g.confirmed} onChange={(e) => patch(g.id, { confirmed: e.target.checked })} title={g.confirmed ? "Confirmado" : "Sin confirmar: todavía no se anotó en la página"} className="h-4 w-4 accent-sun" /></td>
-                  <td className="px-1 py-1"><Cell value={g.fullName} onSave={(v) => patch(g.id, { fullName: v })} className={`font-semibold ${g.confirmed ? "" : "text-paper/70"}`} /></td>
-                  <td className="px-1 py-1"><Cell value={g.placeholderEmail ? "" : g.email} type="email" placeholder="sin email" onSave={(v) => patch(g.id, { email: v })} /></td>
-                  <td className="px-1 py-1">
-                    <span className="flex gap-1" title={inherited ? `Heredado de ${g.invitedBy}` : ""}>
-                      {HOSTS.map((h) => {
-                        const on = g.hostsResolved.includes(h.key);
-                        return <button key={h.key} type="button" onClick={() => patch(g.id, { hosts: toggle(g.hostsResolved, h.key) })}
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${on ? `${hostColor[h.key]} text-ink` : "border border-paper/20 text-muted-foreground"} ${on && inherited ? "opacity-60" : ""}`}>{h.label[0]}</button>;
-                      })}
-                    </span>
-                  </td>
-                  <td className="px-1 py-1">
-                    <Cell value={g.extraNames?.length ? g.extraNames.join(", ") : g.extras ? `+${g.extras}` : ""} placeholder="+2 o nombres" onSave={(v) => patch(g.id, parseExtras(v))} />
-                  </td>
-                  <td className="px-2 py-1 text-center">
-                    {g.receiptUrl ? (
-                      <a href={g.receiptUrl} target="_blank" rel="noreferrer" title="Pagó: ver comprobante" className="inline-flex h-8 items-center gap-1 rounded-full bg-lime px-3 text-[11px] font-extrabold uppercase text-ink">✓ Pagó <span className="font-normal normal-case opacity-70">ver</span></a>
-                    ) : g.discount?.kind === "free" ? (
-                      <span title={`Código ${g.discount.code}`} className="inline-flex h-8 items-center rounded-full bg-lime px-3 text-[11px] font-extrabold uppercase text-ink">✓ Gratis</span>
+                  <td className="px-1 py-1"><Cell value={g.fullName} onSave={(v) => patch(g.id, { fullName: v })} className="font-semibold" /></td>
+                  <td className="px-1 py-1">{hostsCell(g)}</td>
+                  <td className="px-1 py-1"><Cell value={g.referrer} placeholder="quién lo invita" onSave={(v) => patch(g.id, { referrer: v })} /></td>
+                  <td className="px-1 py-1"><Cell value={g.extraNames.length ? g.extraNames.join(", ") : g.extras ? `+${g.extras}` : ""} placeholder="+2 o nombres" onSave={(v) => patch(g.id, parseExtras(v))} /></td>
+                  <td className="px-2 py-1 text-center">{barCell(g)}</td>
+                  <td className="px-1 py-1"><Cell value={g.notes} placeholder="…" onSave={(v) => patch(g.id, { notes: v })} /></td>
+                  <td className="px-2 py-1 text-right">
+                    {linking === g.id ? (
+                      <span className="flex items-center justify-end gap-1">
+                        <select defaultValue="" onChange={(e) => { if (e.target.value === "__confirm") patch(g.id, { confirmed: true }); else if (e.target.value) linkTo(g, e.target.value); }}
+                          className="h-8 max-w-[11rem] rounded-full border border-input bg-card px-2 text-xs">
+                          <option value="" disabled>Vincular con…</option>
+                          {registered.map((r) => <option key={r.id} value={r.id}>{r.fullName}</option>)}
+                          <option value="__confirm">Marcar registrado sin vincular</option>
+                        </select>
+                        <button onClick={() => setLinking(null)} className="text-xs text-muted-foreground">✕</button>
+                      </span>
                     ) : (
-                      <button type="button" onClick={() => patch(g.id, { manualBar: !g.manualBar })} title={g.manualBar ? "Marcado como pagado a mano. Clic para desmarcar" : "Clic para marcar como pagado (efectivo, etc.)"}
-                        className={`inline-flex h-8 items-center gap-1 rounded-full px-3 text-[11px] font-extrabold uppercase transition active:scale-95 ${g.manualBar ? "bg-lime text-ink" : "border-2 border-dashed border-paper/40 text-paper/60 hover:border-sun hover:text-sun"}`}>
-                        {g.manualBar ? "✓ Pagó" : "○ Falta"}
+                      <button onClick={() => markRegistered(g)} title={suggestion ? `Coincide con ${suggestion.fullName}: se unen en una sola fila` : "Elegí con qué registro de la web corresponde"}
+                        className={`inline-flex h-8 items-center gap-1 rounded-full px-3 text-[11px] font-extrabold uppercase transition active:scale-95 ${suggestion ? "bg-sun text-ink" : "border border-paper/30 text-paper/80 hover:border-sun hover:text-sun"}`}>
+                        {suggestion ? "↑ Ya se registró" : "Está registrado"}
                       </button>
                     )}
                   </td>
-                  <td className="px-2 py-1 text-xs text-muted-foreground">{g.invitedBy ?? (g.addedByAdmin ? "cargado a mano" : "link general")}{g.invitedCount ? ` · invitó a ${g.invitedCount}` : ""}{g.discount ? ` · ${g.discount.code}` : ""}</td>
-                  <td className="px-1 py-1"><Cell value={g.notes} placeholder="…" onSave={(v) => patch(g.id, { notes: v })} /></td>
-                  <td className="px-2 py-1">
-                    <button onClick={async () => { await navigator.clipboard.writeText(link(g)); setCopied(g.id); setTimeout(() => setCopied(""), 1500); }} className="rounded-full border border-paper/30 px-2 py-0.5 text-[10px] font-bold uppercase">{copied === g.id ? "copiado" : g.shareCode}</button>
-                  </td>
                   <td className="px-2 py-1 text-right"><button onClick={async () => { if (confirm(`¿Borrar a ${g.fullName}?`)) { await remove({ data: { id: g.id } }); onChange(); } }} className="text-muted-foreground hover:text-destructive" aria-label="Borrar">×</button></td>
                 </tr>
-              </Fragment>);
-            })}
+              </Fragment>
+            ); })}
             <tr className="border-t border-paper/15 bg-muted/10">
               <td className="px-2 py-2 text-xs font-bold text-sun">+</td>
-              <td></td>
               <td className="px-1 py-1"><form id="add-guest" onSubmit={addOne}><input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nombre y apellido" className="h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm outline-none focus:border-ring" /></form></td>
-              <td className="px-1 py-1"><input form="add-guest" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="email (opcional)" type="email" className="h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm outline-none focus:border-ring" /></td>
-              <td colSpan={7} className="px-2 py-1"><button form="add-guest" className="h-9 rounded-full bg-sun px-4 text-xs font-extrabold text-ink transition active:scale-95">Agregar invitado</button></td>
+              <td className="px-1 py-1"><span className="flex gap-1">{HOSTS.map((h) => <button key={h.key} type="button" onClick={() => setNewHosts(toggle(newHosts, h.key))} className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${newHosts.includes(h.key) ? `${hostColor[h.key]} text-ink` : "border border-paper/20 text-muted-foreground"}`}>{h.label[0]}</button>)}</span></td>
+              <td className="px-1 py-1"><input form="add-guest" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="quién lo invita (opcional)" className="h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm outline-none focus:border-ring" /></td>
+              <td colSpan={5} className="px-2 py-1"><button form="add-guest" className="h-9 rounded-full bg-sun px-4 text-xs font-extrabold text-ink transition active:scale-95">Agregar externo</button></td>
             </tr>
           </tbody>
         </table>
       </div>
-      {guests.length === 0 && <p className="mt-3 text-muted-foreground">{total === 0 ? "Todavía no hay invitados. Cargá el primero arriba." : "Nada que coincida."}</p>}
-      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">Clic en una celda para editar; Enter o salir de la celda guarda. "Invitado de" admite uno, dos o los tres (G = Giu, M = Manuch, T = Tincho); si no lo asignás, lo hereda de quien lo invitó con su link. "Acompañantes" acepta un número (+2) o los nombres separados por coma. La tilde ✓ es si confirmó: los que cargás a mano quedan sin confirmar hasta que se anoten en la página con el mismo nombre (se vinculan solos) o la marques vos. En Barra libre, "○ Falta" se cambia a "✓ Pagó" con un clic (para pagos en efectivo o por fuera); si subió comprobante o usó código, ya figura solo. El botón de link copia el link personal del invitado.</p>
+      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">Clic en una celda para editar; Enter o salir de la celda guarda. "Invitado de" admite uno, dos o los tres (G = Giu, M = Manuch, T = Tincho); los registrados lo heredan de quien los invitó con su link. Cuando un externo se anota en la web con el mismo nombre, pasa arriba solo; si se anotó con otro nombre, usá "Está registrado" y elegí con quién va. Al vincular, se unen en una sola fila y se conservan cumpleañero, acompañantes, quién lo invita y la barra libre.</p>
     </section>
   );
 }
