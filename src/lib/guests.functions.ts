@@ -214,7 +214,12 @@ export const adminAddGuests = createServerFn({ method: "POST" })
     const db = await admin();
     const skipped: string[] = [];
     let added = 0;
+    const norm = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+    const { data: existingRows } = await db.from("guests").select("full_name, email");
+    const existingNames = new Set((existingRows ?? []).map((g) => norm(g.full_name)));
     for (const r of data.rows) {
+      if (existingNames.has(norm(r.fullName))) { skipped.push(`${r.fullName} (ya está en la página)`); continue; }
+      existingNames.add(norm(r.fullName));
       let email = (r.email ?? "").trim().toLowerCase();
       if (email) {
         const ok = emailSchema.safeParse(email);

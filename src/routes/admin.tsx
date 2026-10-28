@@ -327,12 +327,12 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
   const comboLabel = (hs: Host[]) => hs.length === 0 ? "Sin asignar" : hs.length === 3 ? "En común (los 3)" : hs.map(hostLabel).join(" + ");
   const comboRank = (hs: Host[]) => hs.length === 3 ? 0 : hs.length === 1 ? 1 + HOSTS.findIndex((x) => x.key === hs[0]) : hs.length === 2 ? 10 : 99;
   const sortedHosts = (hs: Host[]) => [...hs].sort((x, y) => HOSTS.findIndex((h) => h.key === x) - HOSTS.findIndex((h) => h.key === y));
-  const ordered = [...guests].map((g) => ({ ...g, hostsResolved: sortedHosts(g.hostsResolved ?? []), hosts: g.hosts ?? [], extraNames: g.extraNames ?? [] })).sort((a, b) =>
+  const ordered = [...guests].map((g) => ({ ...g, hostsResolved: sortedHosts(g.hostsResolved) })).sort((a, b) =>
     comboRank(a.hostsResolved) - comboRank(b.hostsResolved) || comboLabel(a.hostsResolved).localeCompare(comboLabel(b.hostsResolved)) || a.fullName.localeCompare(b.fullName, "es"),
   ).filter((g) => group === "all" ? true : group === "none" ? g.hostsResolved.length === 0 : g.hostsResolved.includes(group));
-  const counts = HOSTS.map((h) => ({ ...h, n: guests.filter((g) => (g.hostsResolved ?? []).includes(h.key)).length }));
-  const common = guests.filter((g) => (g.hostsResolved ?? []).length === 3).length;
-  const unassigned = guests.filter((g) => (g.hostsResolved ?? []).length === 0).length;
+  const counts = HOSTS.map((h) => ({ ...h, n: guests.filter((g) => g.hostsResolved.includes(h.key)).length }));
+  const common = guests.filter((g) => g.hostsResolved.length === 3).length;
+  const unassigned = guests.filter((g) => g.hostsResolved.length === 0).length;
   const toggle = (hs: Host[], h: Host) => hs.includes(h) ? hs.filter((x) => x !== h) : [...hs, h];
   const parseExtras = (v: string) => { const t = v.trim(); if (!t) return { extras: 0, extraNames: [] as string[] }; if (/^\+?\d+$/.test(t)) return { extras: Number(t.replace("+", "")), extraNames: [] as string[] }; const names = t.split(/[,;+]/).map((x) => x.trim()).filter(Boolean); return { extras: names.length, extraNames: names }; };
   async function patch(id: string, data: { fullName?: string; email?: string; notes?: string; manualBar?: boolean; hosts?: Host[]; extras?: number; extraNames?: string[]; confirmed?: boolean }) {
@@ -375,7 +375,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
     }).filter((r) => r.fullName.length >= 2);
     if (!rows.length) return setMsg("No encontré nombres en el texto");
     const r = await add({ data: { rows, hosts: newHosts } });
-    setMsg(`${r.added} agregados${r.skipped.length ? ` · sin agregar: ${r.skipped.join(", ")}` : ""}`);
+    setMsg(`${r.added} agregados${r.skipped.length ? `. Ya estaban en la página (${r.skipped.length}): ${r.skipped.map((x) => x.replace(/ \(.*\)$/, "")).join(", ")}` : ""}`);
     setBulkText(""); setBulk(false); onChange();
   }
   const link = (g: GuestRow) => `${window.location.origin}/i/${g.shareCode}`;
@@ -451,7 +451,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
                     </span>
                   </td>
                   <td className="px-1 py-1">
-                    <Cell value={g.extraNames?.length ? g.extraNames.join(", ") : g.extras ? `+${g.extras}` : ""} placeholder="+2 o nombres" onSave={(v) => patch(g.id, parseExtras(v))} />
+                    <Cell value={g.extraNames.length ? g.extraNames.join(", ") : g.extras ? `+${g.extras}` : ""} placeholder="+2 o nombres" onSave={(v) => patch(g.id, parseExtras(v))} />
                   </td>
                   <td className="px-2 py-1 text-center">
                     {g.receiptUrl ? (
