@@ -110,6 +110,11 @@ function Admin() {
           <Link to="/" className="rounded-full border border-paper/20 px-3 py-1.5 font-semibold text-paper/80 hover:border-paper/50">Ver invitación</Link>
           <button onClick={exportCsv} className="rounded-full border border-paper/20 px-3 py-1.5 font-semibold text-paper/80 hover:border-paper/50">Exportar CSV</button>
           <button onClick={async () => {
+            const text = data.guests.filter((g) => !g.placeholderEmail).map((g) => g.email).join(", ");
+            setListText(text);
+            try { await navigator.clipboard.writeText(text); setCopiedAll(true); setTimeout(() => setCopiedAll(false), 1800); } catch { /* queda el cuadro */ }
+          }} className="rounded-full border border-paper/20 px-3 py-1.5 font-semibold text-paper/80 hover:border-paper/50">{copiedAll ? "¡Copiado!" : "Copiar emails"}</button>
+          <button onClick={async () => {
             const text = data.guests.map((g) => `${g.fullName}, ${g.placeholderEmail ? "" : g.email}, ${g.confirmed ? "confirmado" : "sin confirmar"}`).join("\n");
             setListText(text);
             try { await navigator.clipboard.writeText(text); setCopiedAll(true); setTimeout(() => setCopiedAll(false), 1800); } catch { /* sin permiso de portapapeles: queda el cuadro para copiar a mano */ }
@@ -122,7 +127,7 @@ function Admin() {
       {listText && (
         <div className="mt-4 rounded-2xl border border-paper/10 bg-card p-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-bold">Lista de invitados ({data.guests.length})</p>
+            <p className="text-sm font-bold">{listText.includes("\n") ? `Lista de invitados (${data.guests.length})` : `Emails (${data.guests.filter((g) => !g.placeholderEmail).length}) · separados por coma, listos para pegar en CCO`}</p>
             <button onClick={() => setListText("")} className="text-xs text-muted-foreground underline">Cerrar</button>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">Si no se copió solo, tocá adentro del cuadro: se selecciona todo, y copiá con Cmd+C (o Ctrl+C).</p>
@@ -472,7 +477,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
     if (group !== "all" || (prev && comboLabel(prev.hostsResolved) === label)) return null;
     return (
       <tr className="border-t border-paper/10">
-        <td colSpan={cols} className="bg-muted/20 px-3 py-2"><span className="inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider"><span className={`inline-block h-2.5 w-2.5 rounded-full ${g.hostsResolved.length === 1 ? hostColor[g.hostsResolved[0]!] : g.hostsResolved.length ? "bg-paper" : "bg-muted-foreground"}`} />{g.hostsResolved.length ? `Invitados ${g.hostsResolved.length === 3 ? "en común" : "de " + label}` : "Sin asignar"}</span></td>
+        <td colSpan={cols} className="px-3 pb-1 pt-4"><span className="inline-flex items-center gap-2 rounded-full bg-paper px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-ink"><span className={`inline-block h-2.5 w-2.5 rounded-full ${g.hostsResolved.length === 1 ? hostColor[g.hostsResolved[0]!] : g.hostsResolved.length ? "bg-ink" : "bg-muted-foreground"}`} />{g.hostsResolved.length ? `Invitados ${g.hostsResolved.length === 3 ? "en común" : "de " + label}` : "Sin asignar"}</span></td>
       </tr>
     );
   };
@@ -540,6 +545,9 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
         <div className="mr-auto">
           <h2 className="text-lg font-bold">Invitados externos <span className="text-muted-foreground">{external.length}</span></h2>
           <p className="text-xs text-muted-foreground">Lista paralela (Excel, cargados a mano). Todavía no se registraron en la web.</p>
+        </div>
+        <div className="w-full rounded-2xl bg-paper px-4 py-3 text-xs leading-relaxed text-ink sm:order-last">
+          <span className="font-extrabold uppercase tracking-wider">Solo para control.</span> Esta lista sirve para saber a quiénes invitamos y llevar el total. Los confirmados son únicamente los que se registran por el link con nombre y email, y aparecen en la lista de arriba. Si alguien de acá ya figura arriba, tocá <span className="font-bold">"Está registrado arriba"</span> y sale de esta lista.
         </div>
         <button onClick={() => setBulk(!bulk)} className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${bulk ? "bg-paper text-ink" : "border border-paper/20 text-paper/80 hover:border-paper/50"}`}>{bulk ? "Cerrar" : "Pegar lista"}</button>
       </div>
