@@ -53,10 +53,12 @@ export type Database = {
       guests: {
         Row: {
           added_by_admin: boolean
+          confirmed_at: string | null
           created_at: string
           discount_applied_at: string | null
           discount_code_id: string | null
           email: string
+          extra_names: string[]
           extras: number
           full_name: string
           hosts: string[]
@@ -72,10 +74,12 @@ export type Database = {
         }
         Insert: {
           added_by_admin?: boolean
+          confirmed_at?: string | null
           created_at?: string
           discount_applied_at?: string | null
           discount_code_id?: string | null
           email: string
+          extra_names?: string[]
           extras?: number
           full_name: string
           hosts?: string[]
@@ -91,10 +95,12 @@ export type Database = {
         }
         Update: {
           added_by_admin?: boolean
+          confirmed_at?: string | null
           created_at?: string
           discount_applied_at?: string | null
           discount_code_id?: string | null
           email?: string
+          extra_names?: string[]
           extras?: number
           full_name?: string
           hosts?: string[]
