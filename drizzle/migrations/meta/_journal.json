@@ -71,6 +71,13 @@
       "when": 1793220440974,
       "tag": "0009_admin_guest_sheet",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793221862124,
+      "tag": "0010_add_guest_admin_fields",
+      "breakpoints": true
     }
   ]
 }
