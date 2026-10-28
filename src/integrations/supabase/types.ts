@@ -52,42 +52,57 @@ export type Database = {
       }
       guests: {
         Row: {
+          added_by_admin: boolean
           created_at: string
           discount_applied_at: string | null
           discount_code_id: string | null
           email: string
+          extras: number
           full_name: string
+          hosts: string[]
           id: string
           invite_code: string
           invited_by: string | null
+          manual_bar: boolean
+          notes: string | null
           qr_token: string
           receipt_path: string | null
           receipt_uploaded_at: string | null
           share_code: string | null
         }
         Insert: {
+          added_by_admin?: boolean
           created_at?: string
           discount_applied_at?: string | null
           discount_code_id?: string | null
           email: string
+          extras?: number
           full_name: string
+          hosts?: string[]
           id?: string
           invite_code: string
           invited_by?: string | null
+          manual_bar?: boolean
+          notes?: string | null
           qr_token: string
           receipt_path?: string | null
           receipt_uploaded_at?: string | null
           share_code?: string | null
         }
         Update: {
+          added_by_admin?: boolean
           created_at?: string
           discount_applied_at?: string | null
           discount_code_id?: string | null
           email?: string
+          extras?: number
           full_name?: string
+          hosts?: string[]
           id?: string
           invite_code?: string
           invited_by?: string | null
+          manual_bar?: boolean
+          notes?: string | null
           qr_token?: string
           receipt_path?: string | null
           receipt_uploaded_at?: string | null
