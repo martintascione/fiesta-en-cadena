@@ -5,6 +5,7 @@ import { adminList, adminLogin, adminLogout, adminSongs, adminRemoveSong, adminC
 import { Trash2, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { COPY_FIELDS, type Copy } from "@/lib/copy";
+import { REMINDER_EMAIL_HTML, REMINDER_EMAIL_SUBJECT } from "@/lib/reminder-email";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/admin")({
@@ -33,6 +34,7 @@ function Admin() {
   const [filter, setFilter] = useState<"all" | "paid" | "unpaid">("all");
   const [tab, setTab] = useState<"guests" | "codes" | "songs" | "copy">("guests");
   const [copiedAll, setCopiedAll] = useState(false);
+  const [reminder, setReminder] = useState(false);
   const [listText, setListText] = useState("");
   const [q, setQ] = useState("");
 
@@ -119,11 +121,13 @@ function Admin() {
             setListText(text);
             try { await navigator.clipboard.writeText(text); setCopiedAll(true); setTimeout(() => setCopiedAll(false), 1800); } catch { /* sin permiso de portapapeles: queda el cuadro para copiar a mano */ }
           }} className="rounded-full border border-paper/20 px-3 py-1.5 font-semibold text-paper/80 hover:border-paper/50">{copiedAll ? "¡Copiado!" : "Copiar lista"}</button>
+          <button onClick={() => setReminder(true)} className="rounded-full bg-destructive px-3 py-1.5 font-extrabold text-paper hover:opacity-90">Recordar pagar</button>
           <button onClick={() => router.invalidate()} className="rounded-full border border-paper/20 px-3 py-1.5 font-semibold text-paper/80 hover:border-paper/50">Actualizar</button>
           <button onClick={async () => { await logout(); router.invalidate(); }} className="rounded-full px-3 py-1.5 font-semibold text-muted-foreground hover:text-destructive">Salir</button>
         </div>
       </header>
 
+      {reminder && <ReminderModal onClose={() => setReminder(false)} />}
       {listText && (
         <div className="mt-4 rounded-2xl border border-paper/10 bg-card p-4">
           <div className="flex items-center justify-between">
@@ -137,10 +141,10 @@ function Admin() {
       )}
       <div className="mt-5 grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
         {stats.map(([l, n, sub, c]) => (
-          <div key={l} className="rounded-2xl border border-paper/10 bg-card p-4">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{l}</p>
-            <p className={`mt-1 text-3xl font-extrabold leading-none tracking-tight sm:text-4xl ${c}`}>{n}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
+          <div key={l} className="rounded-2xl border border-paper/10 bg-card p-3 sm:p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[11px]">{l}</p>
+            <p className={`mt-0.5 text-2xl font-extrabold leading-none tracking-tight sm:mt-1 sm:text-4xl ${c}`}>{n}</p>
+            <p className="mt-1 hidden text-xs text-muted-foreground sm:block">{sub}</p>
           </div>
         ))}
       </div>
@@ -479,53 +483,68 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
     </span>
   );
   const mobileGroupHeader = (g: GuestRow, prev: GuestRow | undefined) => (group === "all" && (!prev || comboLabel(prev.hostsResolved) !== comboLabel(g.hostsResolved))) ? <div className="pt-3">{groupPill(g.hostsResolved)}</div> : null;
+  const [openId, setOpenId] = useState<string | null>(null);
   const mobileCard = (g: GuestRow, kind: "registered" | "external", i: number) => {
     const suggestion = kind === "external" ? registered.find((r) => norm(r.fullName) === norm(g.fullName)) : undefined;
+    const open = openId === g.id;
+    const barState = g.receiptUrl || g.discount?.kind === "free" || g.manualBar ? "ok" : "no";
+    const missing = Math.max(0, g.extras - g.extraNames.length);
     return (
-      <div className={`rounded-2xl border bg-card p-4 ${kind === "external" ? "border-sun/20" : "border-paper/10"}`}>
-        <div className="flex items-start gap-2">
-          <span className="mt-2 text-[11px] text-muted-foreground">{i + 1}</span>
-          <div className="min-w-0 flex-1">
-            <Cell value={g.fullName} onSave={(v) => patch(g.id, { fullName: v })} className="text-base font-bold" />
-            {kind === "registered"
-              ? <Cell value={g.placeholderEmail ? "" : g.email} type="email" placeholder="sin email" onSave={(v) => patch(g.id, { email: v })} className="text-xs text-muted-foreground" />
-              : <Cell value={g.referrer} placeholder="quién lo invita" onSave={(v) => patch(g.id, { referrer: v })} className="text-xs text-muted-foreground" />}
+      <div className={`rounded-xl border bg-card ${open ? "border-paper/30" : kind === "external" ? "border-sun/15" : "border-paper/10"}`}>
+        {/* fila compacta: una línea */}
+        <button type="button" onClick={() => setOpenId(open ? null : g.id)} className="flex w-full items-center gap-2 px-3 py-2.5 text-left">
+          <span className="w-5 shrink-0 text-[11px] text-muted-foreground">{i + 1}</span>
+          <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">{g.fullName}{g.extras ? <span className="ml-1 text-xs font-bold text-sun">+{g.extras}</span> : null}</span>
+          <span className="flex shrink-0 items-center gap-0.5">{HOSTS.map((h) => <span key={h.key} className={`inline-block h-2 w-2 rounded-full ${g.hostsResolved.includes(h.key) ? hostColor[h.key] : "bg-paper/10"}`} />)}</span>
+          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase ${barState === "ok" ? "bg-lime text-ink" : "bg-destructive/15 text-destructive"}`}>{barState === "ok" ? "Pagada" : "Falta"}</span>
+          <span className={`shrink-0 text-muted-foreground transition ${open ? "rotate-180" : ""}`}>⌄</span>
+        </button>
+        {open && (
+          <div className="border-t border-paper/10 px-3 pb-3 pt-2">
+            <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5 text-sm">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Nombre</span>
+              <Cell value={g.fullName} onSave={(v) => patch(g.id, { fullName: v })} className="font-semibold" />
+              {kind === "registered" ? (<>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Email</span>
+                <Cell value={g.placeholderEmail ? "" : g.email} type="email" placeholder="sin email" onSave={(v) => patch(g.id, { email: v })} />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Vino por</span>
+                <span className="px-2 text-xs text-muted-foreground">{g.invitedBy ? `link de ${g.invitedBy}` : g.referrer ? `vía ${g.referrer}` : "link general"}{g.invitedCount ? ` · invitó a ${g.invitedCount}` : ""}{g.discount ? ` · ${g.discount.code}` : ""}</span>
+              </>) : (<>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Lo invita</span>
+                <Cell value={g.referrer} placeholder="quién lo invita" onSave={(v) => patch(g.id, { referrer: v })} />
+              </>)}
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Invitado de</span>
+              <div className="px-1">{hostsCell(g)}</div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Barra</span>
+              <div className="px-1">{barCell(g)}</div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Acomp.</span>
+              <div>{extrasCell(g)}</div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Notas</span>
+              <Cell value={g.notes} placeholder="…" onSave={(v) => patch(g.id, { notes: v })} />
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              {kind === "registered" ? (
+                <button onClick={async () => { await navigator.clipboard.writeText(link(g)); setCopied(g.id); setTimeout(() => setCopied(""), 1500); }} className="rounded-full border border-paper/30 px-3 py-1.5 text-[11px] font-bold uppercase">{copied === g.id ? "copiado" : `copiar link ${g.shareCode}`}</button>
+              ) : linking === g.id ? (
+                <span className="flex min-w-0 flex-1 items-center gap-1">
+                  <select defaultValue="" onChange={(e) => { if (e.target.value === "__confirm") patch(g.id, { confirmed: true }); else if (e.target.value) linkTo(g, e.target.value); }}
+                    className="h-9 min-w-0 flex-1 rounded-full border border-input bg-card px-2 text-xs">
+                    <option value="" disabled>¿Con quién de arriba?</option>
+                    {registered.map((r) => <option key={r.id} value={r.id}>{r.fullName}</option>)}
+                    <option value="__confirm">Marcar registrado sin vincular</option>
+                  </select>
+                  <button onClick={() => setLinking(null)} className="px-2 text-xs text-muted-foreground">✕</button>
+                </span>
+              ) : (
+                <button onClick={() => markRegistered(g)} className={`h-9 flex-1 rounded-full px-3 text-[11px] font-extrabold uppercase transition active:scale-95 ${suggestion ? "bg-sun text-ink" : "border border-paper/30 text-paper/80"}`}>
+                  {suggestion ? "↑ Está registrado arriba" : "Está registrado arriba"}
+                </button>
+              )}
+              <button onClick={async () => { if (confirm(`¿Borrar a ${g.fullName}?`)) { await remove({ data: { id: g.id } }); onChange(); } }} className="ml-auto rounded-full border border-paper/15 px-3 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-destructive">Borrar</button>
+            </div>
+            {missing > 0 && <p className="mt-2 text-[11px] text-sun">Faltan {missing} nombre{missing > 1 ? "s" : ""} de acompañantes.</p>}
           </div>
-          <button onClick={async () => { if (confirm(`¿Borrar a ${g.fullName}?`)) { await remove({ data: { id: g.id } }); onChange(); } }} className="px-1 text-lg leading-none text-muted-foreground hover:text-destructive" aria-label="Borrar">×</button>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {hostsCell(g)}
-          <span className="ml-auto">{barCell(g)}</span>
-        </div>
-        {kind === "registered" && (
-          <p className="mt-2 text-xs text-muted-foreground">{g.invitedBy ? <span className="rounded-full bg-bubble/20 px-2 py-0.5 font-semibold text-bubble">link de {g.invitedBy}</span> : g.referrer ? <span>vía {g.referrer}</span> : <span className="opacity-60">link general</span>}{g.invitedCount ? <span className="ml-1">· invitó a {g.invitedCount}</span> : null}{g.discount ? <span className="ml-1">· {g.discount.code}</span> : null}</p>
         )}
-        <div className="mt-2 grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1 text-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Acomp.</span>
-          <div>{extrasCell(g)}</div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Notas</span>
-          <Cell value={g.notes} placeholder="…" onSave={(v) => patch(g.id, { notes: v })} />
-        </div>
-        <div className="mt-3 flex items-center justify-between gap-2">
-          {kind === "registered" ? (
-            <button onClick={async () => { await navigator.clipboard.writeText(link(g)); setCopied(g.id); setTimeout(() => setCopied(""), 1500); }} className="rounded-full border border-paper/30 px-3 py-1 text-[11px] font-bold uppercase">{copied === g.id ? "copiado" : `link ${g.shareCode}`}</button>
-          ) : linking === g.id ? (
-            <span className="flex w-full items-center gap-1">
-              <select defaultValue="" onChange={(e) => { if (e.target.value === "__confirm") patch(g.id, { confirmed: true }); else if (e.target.value) linkTo(g, e.target.value); }}
-                className="h-9 min-w-0 flex-1 rounded-full border border-input bg-card px-2 text-xs">
-                <option value="" disabled>¿Con quién de arriba?</option>
-                {registered.map((r) => <option key={r.id} value={r.id}>{r.fullName}</option>)}
-                <option value="__confirm">Marcar registrado sin vincular</option>
-              </select>
-              <button onClick={() => setLinking(null)} className="px-2 text-xs text-muted-foreground">✕</button>
-            </span>
-          ) : (
-            <button onClick={() => markRegistered(g)}
-              className={`inline-flex h-9 w-full items-center justify-center rounded-full px-3 text-[11px] font-extrabold uppercase transition active:scale-95 ${suggestion ? "bg-sun text-ink" : "border border-paper/30 text-paper/80"}`}>
-              {suggestion ? "↑ Está registrado arriba" : "Está registrado arriba"}
-            </button>
-          )}
-        </div>
       </div>
     );
   };
@@ -558,7 +577,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
         <h2 className="text-lg font-bold">Registrados en la web <span className="text-muted-foreground">{registered.length}</span></h2>
         <p className="text-xs text-muted-foreground">Se anotaron con nombre y email en la invitación</p>
       </div>
-      <div className="mt-2 space-y-2 md:hidden">
+      <div className="mt-2 space-y-1.5 md:hidden">
         {registered.map((g, i) => <Fragment key={g.id}>{mobileGroupHeader(g, registered[i - 1])}{mobileCard(g, "registered", i)}</Fragment>)}
         {registered.length === 0 && <p className="px-1 py-3 text-sm text-muted-foreground">{total === 0 ? "Todavía no se anotó nadie." : "Nada que coincida con el filtro."}</p>}
       </div>
@@ -607,7 +626,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
           <h2 className="text-lg font-bold">Invitados externos <span className="text-muted-foreground">{external.length}</span></h2>
           <p className="text-xs text-muted-foreground">Lista paralela (Excel, cargados a mano). Todavía no se registraron en la web.</p>
         </div>
-        <div className="w-full rounded-2xl bg-paper px-4 py-3 text-xs leading-relaxed text-ink sm:order-last">
+        <div className="w-full rounded-2xl bg-paper px-4 py-2.5 text-[11px] leading-snug text-ink sm:order-last sm:py-3 sm:text-xs sm:leading-relaxed">
           <span className="font-extrabold uppercase tracking-wider">Solo para control.</span> Esta lista sirve para saber a quiénes invitamos y llevar el total. Los confirmados son únicamente los que se registran por el link con nombre y email, y aparecen en la lista de arriba. Si alguien de acá ya figura arriba, tocá <span className="font-bold">"Está registrado arriba"</span> y sale de esta lista.
         </div>
         <button onClick={() => setBulk(!bulk)} className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${bulk ? "bg-paper text-ink" : "border border-paper/20 text-paper/80 hover:border-paper/50"}`}>{bulk ? "Cerrar" : "Pegar lista"}</button>
@@ -625,7 +644,7 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
           <button onClick={addBulk} className="mt-2 h-10 rounded-full bg-primary px-5 text-sm font-extrabold text-primary-foreground">Agregar todos</button>
         </div>
       )}
-      <div className="mt-3 space-y-2 md:hidden">
+      <div className="mt-3 space-y-1.5 md:hidden">
         {external.map((g, i) => <Fragment key={g.id}>{mobileGroupHeader(g, external[i - 1])}{mobileCard(g, "external", i)}</Fragment>)}
         <form onSubmit={addOne} className="rounded-2xl border border-dashed border-sun/40 bg-card p-4">
           <p className="text-[10px] font-bold uppercase tracking-wider text-sun">Agregar externo</p>
@@ -698,7 +717,53 @@ function GuestSheet({ guests: incoming, total, onChange }: { guests: GuestRow[];
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">Clic en una celda para editar; Enter o salir de la celda guarda. "Invitado de" admite uno, dos o los tres (G = Giu, M = Manuch, T = Tincho); los registrados lo heredan de quien los invitó con su link. Cuando un externo se anota en la web con el mismo nombre, pasa arriba solo; si se anotó con otro nombre, usá "Está registrado" y elegí con quién va. Al vincular, se unen en una sola fila y se conservan cumpleañero, acompañantes, quién lo invita y la barra libre.</p>
+      <p className="mt-3 hidden text-xs leading-relaxed text-muted-foreground md:block">Clic en una celda para editar; Enter o salir de la celda guarda. "Invitado de" admite uno, dos o los tres (G = Giu, M = Manuch, T = Tincho); los registrados lo heredan de quien los invitó con su link. Cuando un externo se anota en la web con el mismo nombre, pasa arriba solo; si se anotó con otro nombre, usá "Está registrado" y elegí con quién va. Al vincular, se unen en una sola fila y se conservan cumpleañero, acompañantes, quién lo invita y la barra libre.</p>
     </section>
+  );
+}
+
+function ReminderModal({ onClose }: { onClose: () => void }) {
+  const [state, setState] = useState<"idle" | "ok" | "manual">("idle");
+  const [emails, setEmails] = useState("");
+  const data = Route.useLoaderData();
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  async function copyHtml() {
+    try { await navigator.clipboard.writeText(REMINDER_EMAIL_HTML); setState("ok"); setTimeout(() => setState("idle"), 2000); } catch { setState("manual"); }
+  }
+  async function copyPending() {
+    const list = data.guests.filter((g) => !g.placeholderEmail && !(g.receiptUrl || g.discount?.kind === "free" || g.manualBar)).map((g) => g.email).join(", ");
+    setEmails(list);
+    try { await navigator.clipboard.writeText(list); } catch { /* queda el cuadro */ }
+  }
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-6" onClick={onClose}>
+      <div className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border border-paper/10 bg-card sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-wrap items-center gap-2 border-b border-paper/10 px-4 py-3">
+          <div className="mr-auto">
+            <p className="text-sm font-bold">Recordatorio de barra libre</p>
+            <p className="text-xs text-muted-foreground">Asunto sugerido: <span className="text-paper">{REMINDER_EMAIL_SUBJECT}</span></p>
+          </div>
+          <button onClick={copyPending} className="rounded-full border border-paper/20 px-3 py-1.5 text-xs font-bold text-paper/80 hover:border-paper/50">Copiar emails de los que faltan pagar</button>
+          <button onClick={copyHtml} className="rounded-full bg-sun px-3 py-1.5 text-xs font-extrabold text-ink">{state === "ok" ? "¡HTML copiado!" : "Copiar HTML"}</button>
+          <button onClick={onClose} className="px-2 text-lg leading-none text-muted-foreground hover:text-paper" aria-label="Cerrar">×</button>
+        </div>
+        {emails && (
+          <div className="border-b border-paper/10 px-4 py-2">
+            <p className="text-[11px] text-muted-foreground">Emails de los que todavía no pagaron ({emails.split(", ").filter(Boolean).length}) · pegalos en CCO:</p>
+            <textarea readOnly value={emails} rows={2} onFocus={(e) => e.target.select()} className="mt-1 w-full rounded-lg border border-paper/15 bg-ink px-2 py-1 font-mono text-[11px] text-paper outline-none" />
+          </div>
+        )}
+        {state === "manual" && (
+          <div className="border-b border-paper/10 px-4 py-2">
+            <p className="text-[11px] text-muted-foreground">El navegador bloqueó el portapapeles: tocá el cuadro, se selecciona todo, y copiá con Cmd+C.</p>
+            <textarea readOnly value={REMINDER_EMAIL_HTML} rows={4} onFocus={(e) => e.target.select()} className="mt-1 w-full rounded-lg border border-paper/15 bg-ink px-2 py-1 font-mono text-[11px] text-paper outline-none" />
+          </div>
+        )}
+        <iframe title="Vista previa del mail" srcDoc={REMINDER_EMAIL_HTML} sandbox="" className="h-[70vh] w-full flex-1 bg-[#0e0e0e]" />
+      </div>
+    </div>
   );
 }

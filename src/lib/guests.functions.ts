@@ -331,6 +331,16 @@ export const confirmReceipt = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const getConfirmedCount = createServerFn({ method: "GET" }).handler(async (): Promise<number> => {
+  try {
+    const db = await admin();
+    const { count } = await db.from("guests").select("id", { count: "exact", head: true }).not("confirmed_at", "is", null);
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+});
+
 export const getCopy = createServerFn({ method: "GET" }).handler(async () => {
   try {
     const db = await admin();

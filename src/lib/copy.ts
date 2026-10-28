@@ -15,6 +15,10 @@ export const COPY_FIELDS = [
   { key: "barNote", label: "Barra libre (nota)", multiline: false },
   { key: "formTitle", label: "Título del formulario", multiline: false },
   { key: "formSub", label: "Texto del formulario", multiline: false },
+  { key: "counterBase", label: "Contador: número base (se suma a los registrados reales; 0 para mostrar solo los reales)", multiline: false },
+  { key: "counterLimit", label: "Contador: cupo total (para la barra de lugares; 0 = sin barra)", multiline: false },
+  { key: "counterLine", label: "Contador: frase de arriba", multiline: false },
+  { key: "counterSub", label: "Contador: frase de abajo ({next} = tu número)", multiline: false },
   { key: "button", label: "Botón", multiline: false },
   { key: "buttonLoading", label: "Botón mientras carga", multiline: false },
 ] as const;
@@ -39,6 +43,10 @@ export const DEFAULT_COPY: Copy = {
   barNote: "toda la noche",
   formTitle: "Confirmá tu lugar.",
   formSub: "Solo tu nombre y email. Nada más.",
+  counterBase: "120",
+  counterLimit: "160",
+  counterLine: "Ya somos",
+  counterSub: "Sos el #{next}. Quedan pocos lugares.",
   button: "Yendo",
   buttonLoading: "Abrime que estoy afuera",
 };

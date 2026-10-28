@@ -41,7 +41,7 @@ function Synopsis({ text }: { text: string }) {
   );
 }
 
-export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAULT_COPY }: { refCode?: string | undefined; inviterName?: string | null | undefined; mainPoster?: boolean; copy?: Copy }) {
+export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAULT_COPY, confirmedCount = 0 }: { refCode?: string | undefined; inviterName?: string | null | undefined; mainPoster?: boolean; copy?: Copy; confirmedCount?: number }) {
   const c = copy;
   const register = useServerFn(registerGuest);
   const find = useServerFn(findGuest);
@@ -102,6 +102,7 @@ export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAUL
               <div><dt>Barra libre</dt><dd>{c.bar}<small>{c.barNote}</small></dd></div>
             </dl>
             <Countdown />
+            <Counter total={(parseInt(c.counterBase, 10) || 0) + confirmedCount} limit={parseInt(c.counterLimit, 10) || 0} line={c.counterLine} sub={c.counterSub} />
           </section>
           <div className="night-cast">
             <img src="/tricumple/trio.png" alt="" className="night-cut" loading="eager" />
@@ -203,6 +204,35 @@ export function Invite({ refCode, inviterName, mainPoster = false, copy = DEFAUL
 }
 
 const PARTY_AT = new Date("2026-11-07T01:30:00-03:00").getTime();
+
+function Counter({ total, limit, line, sub }: { total: number; limit: number; line: string; sub: string }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    let raf = 0; const start = performance.now(); const dur = 1600;
+    const tick = (t: number) => { const k = Math.min(1, (t - start) / dur); setN(Math.round(total * (1 - Math.pow(1 - k, 3)))); if (k < 1) raf = requestAnimationFrame(tick); };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [total]);
+  if (!total) return null;
+  const left = limit ? Math.max(0, limit - total) : 0;
+  const pct = limit ? Math.min(100, Math.round((n / limit) * 100)) : 0;
+  const fmt = (s: string) => s.replace("{n}", String(n)).replace("{next}", String(total + 1)).replace("{left}", String(left));
+  return (
+    <section className="night-counter" aria-live="polite">
+      <div className="night-counter-head">
+        <span className="night-live" aria-hidden /><span className="night-counter-kicker">Tricumple · 6/11</span>
+      </div>
+      <p className="night-counter-line">{fmt(line)}</p>
+      <p className="night-counter-num"><span>{n}</span><small>confirmados</small></p>
+      {limit > 0 && (
+        <div className="night-counter-bar" role="progressbar" aria-valuenow={total} aria-valuemin={0} aria-valuemax={limit}>
+          <span style={{ width: `${pct}%` }} />
+        </div>
+      )}
+      {sub && <p className="night-counter-sub">{fmt(sub)}</p>}
+    </section>
+  );
+}
 
 function Countdown() {
   const [left, setLeft] = useState<number | null>(null);

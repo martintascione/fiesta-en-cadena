@@ -1,14 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Invite } from "@/components/Invite";
-import { getCopy } from "@/lib/guests.functions";
+import { getCopy, getConfirmedCount } from "@/lib/guests.functions";
 import { communitySongsOptions } from "@/components/CommunityPlaylist";
 
 const SITE = (import.meta.env["VITE_SITE_URL"] as string | undefined)?.replace(/\/$/, "") ?? "";
 const OG_IMAGE = `${SITE}/og.png`;
 export const Route = createFileRoute("/")({
   loader: async ({ context }) => {
-    const [copy] = await Promise.all([getCopy(), context.queryClient.ensureQueryData(communitySongsOptions)]);
-    return copy;
+    const [copy, confirmed] = await Promise.all([getCopy(), getConfirmedCount(), context.queryClient.ensureQueryData(communitySongsOptions)]);
+    return { copy, confirmed };
   },
   head: () => ({
     meta: [
@@ -24,5 +24,5 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: () => <Invite mainPoster copy={Route.useLoaderData()} />,
+  component: () => { const d = Route.useLoaderData(); return <Invite mainPoster copy={d.copy} confirmedCount={d.confirmed} />; },
 });
